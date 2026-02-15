@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=com.jaoushingan.Win2xcur
+Exec=@bindir@/win2xcur-gui --gapplication-service
