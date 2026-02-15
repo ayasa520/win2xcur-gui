@@ -379,6 +379,9 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                 self.file_info_row.set_title(os.path.basename(file_path))
                 self.log(f"已选择文件: {self.zip_path}")
 
+                # 更换文件后重置输出目录，使输出路径重新随主题名变化
+                self.output_dir = None
+
                 # 切换到配置页面
                 self.stack.set_visible_child_name("config")
 
@@ -416,6 +419,9 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                 self.zip_path = file.get_path()
                 self.file_info_row.set_title(os.path.basename(self.zip_path))
                 self.log(f"已选择文件: {self.zip_path}")
+
+                # 更换文件后重置输出目录，使输出路径重新随主题名变化
+                self.output_dir = None
 
                 # 切换到配置页面
                 self.stack.set_visible_child_name("config")
