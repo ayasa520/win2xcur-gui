@@ -50,6 +50,4 @@ if __name__ == '__main__':
     resource._register()
 
     from win2xcur_gui import main
-    import os
-    print(os.system(f"realpath {os.path.expanduser("~")}"))
     sys.exit(main.main(VERSION))

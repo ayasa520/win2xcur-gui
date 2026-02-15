@@ -1,7 +1,7 @@
 {
     "id": "com.jaoushingan.Win2xcur",
     "runtime": "org.gnome.Platform",
-    "runtime-version": "master",
+    "runtime-version": "49",
     "sdk": "org.gnome.Sdk",
     "command": "win2xcur-gui",
     "finish-args": [
@@ -104,7 +104,8 @@
             "sources": [
                 {
                     "type": "git",
-                    "url": "https://github.com/ayasa520/win2xcur-gui.git"
+                    "url": "https://github.com/ayasa520/win2xcur-gui.git",
+                    "branch": "main"
                 }
             ]
         }
