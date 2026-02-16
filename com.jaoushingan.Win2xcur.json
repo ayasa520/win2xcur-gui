@@ -62,18 +62,6 @@
             ]
         },
         {
-            "name": "python3-meson",
-            "buildsystem": "simple",
-            "build-options": {
-                "build-args": [
-                    "--share=network"
-                ]
-            },
-            "build-commands": [
-                "pip3 install --prefix=${FLATPAK_DEST} meson"
-            ]
-        },
-        {
             "name": "python3-win2xcur",
             "buildsystem": "simple",
             "build-commands": [
