@@ -105,8 +105,10 @@ class CursorConverter:
                     original_sizes.add(image.nominal)
             self.log(f"  原文件尺寸: {','.join(str(x) for x in sorted(original_sizes))}")
 
-            # 为每个目标尺寸生成帧
-            all_frames = []
+            # 为每个目标尺寸生成帧（最后按帧索引合并，不是串联）
+            base_frame_count = len(cursor.frames)
+            merged_frames = []  # 最终输出：按帧合并多个尺寸
+            
             for target_size in target_sizes:
                 # 每次都重新解析原始数据（避免 deepcopy 问题）
                 cursor_temp = open_blob(cursor_data)
@@ -124,24 +126,39 @@ class CursorConverter:
                             size_frames.append(new_frame)
                     self.log(f"  使用原始 {target_size}x{target_size} ({len(size_frames)} 帧)")
                 else:
-                    # 需要缩放生成
-                    size_frames = cursor_temp.frames
-
-                    # 计算缩放比例：目标尺寸 / 原始尺寸
-                    if original_sizes:
-                        original_size = max(original_sizes)  # 使用最大的原始尺寸
-                        scale_ratio = target_size / original_size
-                        scale_to_frames(size_frames, scale=scale_ratio)
-
-                        # 修正 nominal 值（apply_to_frames 不会自动更新它）
-                        for frame in size_frames:
-                            for image in frame.images:
-                                image.nominal = target_size
-
-                        self.log(f"  缩放生成 {target_size}x{target_size} (从 {original_size}x{original_size}, {len(size_frames)} 帧)")
-                    else:
+                    # 需要缩放生成：只取源尺寸（最大尺寸）的一张 image，避免把多个尺寸一起缩放
+                    if not original_sizes:
                         self.log(f"  ✗ 无法生成 {target_size}x{target_size}：原文件无有效尺寸")
                         continue
+
+                    from win2xcur.cursor import CursorFrame
+                    original_size = max(original_sizes)  # 使用最大的原始尺寸作为源
+                    size_frames = []
+                    scale_ratio = target_size / original_size
+                    
+                    # 每处理一帧就重新解析（绕过 win2xcur 内部帧间状态污染bug）
+                    for frame_idx in range(len(cursor_temp.frames)):
+                        cursor_fresh = open_blob(cursor_data)  # 重新解析避免帧间污染
+                        frame = cursor_fresh.frames[frame_idx]
+                        
+                        # 取源尺寸的 image
+                        img = next((i for i in frame.images if i.nominal == original_size), None)
+                        if img is None and frame.images:
+                            max_in_frame = max(i.nominal for i in frame.images)
+                            img = next((i for i in frame.images if i.nominal == max_in_frame), frame.images[0])
+                        if img is None:
+                            size_frames.append(CursorFrame(images=[], delay=frame.delay))
+                        else:
+                            temp_frame = CursorFrame(images=[img], delay=frame.delay)
+                            scale_to_frames([temp_frame], scale=scale_ratio)
+                            size_frames.append(temp_frame)
+
+                    # 修正 nominal 值（apply_to_frames 不会自动更新它）
+                    for frame in size_frames:
+                        for image in frame.images:
+                            image.nominal = target_size
+
+                    self.log(f"  缩放生成 {target_size}x{target_size} (从 {original_size}x{original_size}, {len(size_frames)} 帧)")
 
                 # 如果需要，添加阴影（模拟 Windows 光标阴影，参数为相对比例）
                 if add_shadow:
@@ -154,16 +171,32 @@ class CursorConverter:
                         yoffset=0.02,
                     )
 
-                all_frames.extend(size_frames)
+                # 按帧合并到 merged_frames（保持帧数 = base_frame_count，不乘以尺寸数）
+                if not merged_frames:
+                    # 第一个尺寸：直接建立骨架
+                    from win2xcur.cursor import CursorFrame
+                    merged_frames = [
+                        CursorFrame(images=list(fr.images), delay=fr.delay) 
+                        for fr in size_frames[:base_frame_count]
+                    ]
+                else:
+                    # 后续尺寸：往对应帧追加 image
+                    for idx in range(min(len(merged_frames), len(size_frames))):
+                        merged_frames[idx].images.extend(size_frames[idx].images)
+
+            # 检查是否有成功生成的帧
+            if not merged_frames or all(len(fr.images) == 0 for fr in merged_frames):
+                self.log(f"✗ 未能生成任何尺寸: {cursor_file}")
+                return False
 
             # 转换为 X11 格式
-            x11_data = to_x11(all_frames)
+            x11_data = to_x11(merged_frames)
 
             # 写入文件
             with open(output_file, "wb") as f:
                 f.write(x11_data)
 
-            self.log(f"  ✓ 生成包含 {len(target_sizes)} 个尺寸的光标文件")
+            self.log(f"  ✓ 生成包含 {len(target_sizes)} 个尺寸的光标文件（{len(merged_frames)} 帧）")
             return True
 
         except Exception as e:
