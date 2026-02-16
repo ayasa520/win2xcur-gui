@@ -34,6 +34,7 @@ win2xcur_gui_sources = [
   'models.py',
   'inf_parser.py',
   'converter.py',
+  'cursor_preview.py',
 ]
 
 install_data(win2xcur_gui_sources, install_dir: moduledir)

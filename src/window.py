@@ -40,6 +40,7 @@ from .constants import WIN_TO_XCURSOR
 from .models import ThemeNameModel
 from .inf_parser import INFParser
 from .converter import CursorConverter
+from .cursor_preview import CursorPreviewDialog
 
 
 class Win2xcurGuiWindow(Adw.ApplicationWindow):
@@ -338,6 +339,12 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.convert_btn.set_sensitive(False)
         self.convert_btn.connect("clicked", self.on_convert)
         self.button_box.append(self.convert_btn)
+
+        self.preview_btn = Gtk.Button(label="查看光标")
+        self.preview_btn.add_css_class("pill")
+        self.preview_btn.set_sensitive(False)
+        self.preview_btn.connect("clicked", self.on_preview_cursors)
+        self.button_box.append(self.preview_btn)
 
         self.apply_btn = Gtk.Button(label="安装主题")
         self.apply_btn.add_css_class("pill")
@@ -704,6 +711,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.progress_clamp.set_visible(False)
         self.button_box.set_visible(True)
         self.convert_btn.set_sensitive(True)
+        self.preview_btn.set_sensitive(True)
         self.apply_btn.set_sensitive(True)
 
     def _on_conversion_error(self):
@@ -711,7 +719,20 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.progress_clamp.set_visible(False)
         self.button_box.set_visible(True)
         self.convert_btn.set_sensitive(True)
+        self.preview_btn.set_sensitive(False)
         self.apply_btn.set_sensitive(False)
+
+    def on_preview_cursors(self, button):
+        """打开光标预览对话框（参考 xcursor-viewer，动态指针按动态图连续播放）"""
+        if not self.output_dir:
+            self.log("错误: 请先完成转换")
+            return
+        cursors_dir = os.path.join(self.output_dir, "cursors")
+        if not os.path.isdir(cursors_dir):
+            self.log("错误: 未找到 cursors 目录")
+            return
+        dialog = CursorPreviewDialog(cursors_dir=cursors_dir)
+        dialog.present(self)
 
     def on_install_theme(self, button):
         """安装主题到用户图标目录（仅复制文件，不修改系统/桌面主题设置）"""
