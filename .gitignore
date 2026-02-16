@@ -1,0 +1,22 @@
+# Build directories
+build/
+build-dir/
+.flatpak-builder/
+repo/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Local scripts and docs (not for git)
+FLATPAK_RELEASE.md
+update-flatpak-repo.sh
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
