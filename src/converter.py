@@ -143,9 +143,16 @@ class CursorConverter:
                         self.log(f"  ✗ 无法生成 {target_size}x{target_size}：原文件无有效尺寸")
                         continue
 
-                # 如果需要，添加阴影
+                # 如果需要，添加阴影（模拟 Windows 光标阴影，参数为相对比例）
                 if add_shadow:
-                    add_shadow_to_frames(size_frames)
+                    add_shadow_to_frames(
+                        size_frames,
+                        color="black",
+                        radius=0.08,
+                        sigma=0.04,
+                        xoffset=0.02,
+                        yoffset=0.02,
+                    )
 
                 all_frames.extend(size_frames)
 
