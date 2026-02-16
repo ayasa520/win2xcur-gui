@@ -28,7 +28,7 @@
             "name": "imagemagick",
             "buildsystem": "autotools",
             "config-opts": [
-                "--with-modules",
+                "--without-modules",
                 "--without-x",
                 "--disable-static",
                 "--enable-shared",
