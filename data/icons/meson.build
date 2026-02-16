@@ -1,4 +1,4 @@
-application_id = 'com.jaoushingan.Win2xcur'
+application_id = 'io.github.ayasa520.Win2xcur'
 
 scalable_dir = 'hicolor' / 'scalable' / 'apps'
 install_data(

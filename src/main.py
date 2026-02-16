@@ -36,7 +36,7 @@ class Win2xcurGuiApplication(Adw.Application):
     """The main application singleton class."""
 
     def __init__(self):
-        super().__init__(application_id='com.jaoushingan.Win2xcur',
+        super().__init__(application_id='io.github.ayasa520.Win2xcur',
                          flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
                          resource_base_path='/com/jaoushingan/Win2xcur')
         self.create_action('quit', lambda *_: self.quit(), ['<control>q'])
@@ -57,7 +57,7 @@ class Win2xcurGuiApplication(Adw.Application):
     def on_about_action(self, *args):
         """Callback for the app.about action."""
         about = Adw.AboutDialog(application_name='win2xcur-gui',
-                                application_icon='com.jaoushingan.Win2xcur',
+                                application_icon='io.github.ayasa520.Win2xcur',
                                 developer_name='Unknown',
                                 version='0.1.0',
                                 developers=['Unknown'],

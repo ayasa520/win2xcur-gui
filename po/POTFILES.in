@@ -1,8 +1,8 @@
 # List of source files containing translatable strings.
 # Please keep this file sorted alphabetically.
-data/com.jaoushingan.Win2xcur.desktop.in
-data/com.jaoushingan.Win2xcur.metainfo.xml.in
-data/com.jaoushingan.Win2xcur.gschema.xml
+data/io.github.ayasa520.Win2xcur.desktop.in
+data/io.github.ayasa520.Win2xcur.metainfo.xml.in
+data/io.github.ayasa520.Win2xcur.gschema.xml
 src/main.py
 src/window.py
 src/window.ui

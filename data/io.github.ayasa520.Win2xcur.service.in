@@ -1,3 +1,3 @@
 [D-BUS Service]
-Name=com.jaoushingan.Win2xcur
+Name=io.github.ayasa520.Win2xcur
 Exec=@bindir@/win2xcur-gui --gapplication-service

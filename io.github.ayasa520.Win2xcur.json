@@ -1,5 +1,5 @@
 {
-    "id": "com.jaoushingan.Win2xcur",
+    "id": "io.github.ayasa520.Win2xcur",
     "runtime": "org.gnome.Platform",
     "runtime-version": "49",
     "sdk": "org.gnome.Sdk",

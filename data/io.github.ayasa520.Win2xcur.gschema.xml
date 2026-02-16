@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="win2xcur-gui">
-	<schema id="com.jaoushingan.Win2xcur" path="/com/jaoushingan/Win2xcur/">
+	<schema id="io.github.ayasa520.Win2xcur" path="/com/jaoushingan/Win2xcur/">
 	</schema>
 </schemalist>

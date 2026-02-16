@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=win2xcur-gui
 Exec=win2xcur-gui
-Icon=com.jaoushingan.Win2xcur
+Icon=io.github.ayasa520.Win2xcur
 Terminal=false
 Type=Application
 Categories=Utility;
