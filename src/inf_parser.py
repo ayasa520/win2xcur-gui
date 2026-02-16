@@ -57,7 +57,8 @@ class INFParser:
 
             # 使用正则表达式解析
             strings_section = self._extract_section(content, "strings")
-            theme_value, scheme_reg = self._extract_scheme_reg(content)
+            addreg_sections = self._get_addreg_sections(content)
+            theme_value, scheme_reg = self._extract_scheme_reg(content, addreg_sections)
 
             # 解析 Strings 段（如果存在）
             string_vars = {}
@@ -101,46 +102,61 @@ class INFParser:
         match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
         return match.group(1).strip() if match else None
 
-    def _extract_scheme_reg(self, content: str):
-        """提取 Scheme.Reg 段落中的主题名称和光标列表
+    def _get_addreg_sections(self, content: str) -> list[str]:
+        """从 [DefaultInstall] 中解析 AddReg 指定的段名列表。
+
+        例如 AddReg = Scheme.Reg,Wreg 返回 ['scheme.reg', 'wreg']。
+        """
+        default_install = self._extract_section(content, "defaultinstall")
+        if not default_install:
+            return []
+
+        for line in default_install.split("\n"):
+            line = line.strip()
+            if not line or line.startswith(";"):
+                continue
+            # 匹配 AddReg = value 或 AddReg=value，value 可能含逗号
+            m = re.match(r"addreg\s*=\s*(.+)", line, re.IGNORECASE)
+            if m:
+                value = m.group(1).strip()
+                # 按逗号分隔，去掉空白，并统一为小写以匹配 _extract_section
+                return [s.strip().lower() for s in value.split(",") if s.strip()]
+        return []
+
+    def _extract_scheme_reg(self, content: str, addreg_sections: list[str]):
+        """从 AddReg 指定的段落中查找 HKCU + Control Panel\\Cursors\\Schemes 行，提取主题名和光标列表。
 
         返回: (theme_name_or_var, cursor_list)
         - theme_name_or_var: 主题名称（可能是变量名或直接值）
         - cursor_list: 光标列表字符串（可能包含变量或直接文件名）
         """
-        pattern = r"\[scheme\.reg\](.*?)(?=\n\[|\Z)"
-        match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
-        if match:
+        for section_name in addreg_sections:
+            # 段名在 INF 里通常带方括号，且大小写可能任意，content 已转小写故用 section_name 小写
+            pattern = rf"\[{re.escape(section_name)}\](.*?)(?=\n\[|\Z)"
+            match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+            if not match:
+                continue
+
             section = match.group(1).strip()
+            hkcu_lines = [
+                line.strip()
+                for line in section.split("\n")
+                if line.strip().lower().startswith("hkcu")
+            ]
 
-            # 找到所有 HKCU 行
-            hkcu_lines = [line.strip() for line in section.split('\n')
-                         if line.strip().lower().startswith('hkcu')]
-
-            if not hkcu_lines:
-                return (None, None)
-
-            # 查找包含 "Control Panel\Cursors\Schemes" 的 HKCU 行
-            schemes_line = None
             for line in hkcu_lines:
-                if r'control panel\cursors\schemes' in line.lower():
-                    schemes_line = line
-                    break
+                if "control panel" not in line.lower() or "cursors" not in line.lower() or "schemes" not in line.lower():
+                    continue
 
-            if not schemes_line:
-                return (None, None)
+                quoted_pattern = r'"([^"]*(?:""[^"]*)*)"'
+                parts = re.findall(quoted_pattern, line)
+                if len(parts) < 2:
+                    continue
 
-            # 使用正则表达式提取所有引号字段
-            quoted_pattern = r'"([^"]*(?:""[^"]*)*)"'
-            parts = re.findall(quoted_pattern, schemes_line)
+                theme_value = parts[1]
+                cursor_list = parts[-1]
+                return (theme_value, cursor_list)
 
-            if len(parts) < 2:
-                return (None, None)
-
-            theme_value = parts[1]
-            cursor_list = parts[-1]
-
-            return (theme_value, cursor_list)
         return (None, None)
 
     def _parse_strings(self, strings_content: str):
