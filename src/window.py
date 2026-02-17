@@ -1,14 +1,11 @@
-"""主窗口模块"""
-
 import os
-import sys
 import zipfile
 import tempfile
 import shutil
 import re
 import threading
 import queue
-from pathlib import Path
+import gettext
 
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 
@@ -18,81 +15,83 @@ from .inf_parser import INFParser
 from .converter import CursorConverter
 from .cursor_preview import CursorPreviewDialog
 
+_ = gettext.gettext
+
 
 class Win2xcurGuiWindow(Adw.ApplicationWindow):
-    """主窗口"""
+    """Main window"""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.set_title("Windows 光标主题转换工具")
+        self.set_title(_("Windows Cursor Theme Converter"))
         self.set_default_size(800, 600)
 
-        # 创建主布局
+        # Create main layout
         self.setup_ui()
 
-        # 状态变量
+        # State variables
         self.zip_path = None
         self.temp_dir = None
         self.inf_parser = None
-        self.inf_dir = None  # INF 文件所在目录
-        self.output_dir = None  # 输出目录
+        self.inf_dir = None  # INF file directory
+        self.output_dir = None  # Output directory
 
-        # 初始化转换器
+        # Initialize converter
         self.converter = CursorConverter(log_callback=self.log)
 
     def setup_ui(self):
-        """设置用户界面"""
-        # 主容器
+        """Setup user interface"""
+        # Main container
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_content(main_box)
 
-        # 标题栏
+        # Header bar
         header = Adw.HeaderBar()
         main_box.append(header)
 
-        # 使用 Stack 管理多个页面
+        # Use Stack to manage multiple pages
         self.stack = Gtk.Stack()
         self.stack.set_vexpand(True)
         main_box.append(self.stack)
 
-        # ===== 页面 1: 欢迎页（StatusPage + 拖放） =====
+        # ===== Page 1: Welcome page (StatusPage + drag-drop) =====
         welcome_page = self.create_welcome_page()
         self.stack.add_named(welcome_page, "welcome")
 
-        # ===== 页面 2: 配置页 =====
+        # ===== Page 2: Config page =====
         config_page = self.create_config_page()
         self.stack.add_named(config_page, "config")
 
-        # 默认显示欢迎页
+        # Show welcome page by default
         self.stack.set_visible_child_name("welcome")
 
     def create_welcome_page(self):
-        """创建欢迎页面"""
+        """Create welcome page"""
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         page.set_vexpand(True)
 
         # StatusPage
         status = Adw.StatusPage()
         status.set_icon_name("folder-download-symbolic")
-        status.set_title("Windows 光标主题转换工具")
-        status.set_description("拖入 ZIP 压缩包或点击按钮选择文件\n支持 .cur 和 .ani 格式")
+        status.set_title(_("Windows Cursor Theme Converter"))
+        status.set_description(_("Drag in a ZIP file or click the button to select a file\nSupports .cur and .ani formats"))
         page.append(status)
 
-        # 按钮容器
+        # Button container
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         button_box.set_halign(Gtk.Align.CENTER)
         button_box.set_margin_top(20)
         page.append(button_box)
 
-        # 选择文件按钮
-        select_btn = Gtk.Button(label="选择 ZIP 文件")
+        # Select file button
+        select_btn = Gtk.Button(label=_("Select ZIP File"))
         select_btn.add_css_class("pill")
         select_btn.add_css_class("suggested-action")
         select_btn.connect("clicked", self.on_select_file)
         button_box.append(select_btn)
 
-        # 设置拖放目标
+        # Setup drop target
         drop_target = Gtk.DropTarget.new(Gio.File, Gdk.DragAction.COPY)
         drop_target.connect("drop", self.on_file_dropped)
         page.add_controller(drop_target)
@@ -100,12 +99,12 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         return page
 
     def create_config_page(self):
-        """创建配置页面"""
-        # 滚动容器
+        """Create config page"""
+        # Scroll container
         scroll = Gtk.ScrolledWindow()
         scroll.set_vexpand(True)
 
-        # 内容区域
+        # Content area
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         content.set_margin_top(20)
         content.set_margin_bottom(20)
@@ -113,29 +112,29 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         content.set_margin_end(20)
         scroll.set_child(content)
 
-        # 文件信息
+        # File info
         file_group = Adw.PreferencesGroup()
-        file_group.set_title("当前文件")
+        file_group.set_title(_("Current File"))
         content.append(file_group)
 
         self.file_info_row = Adw.ActionRow()
-        self.file_info_row.set_title("未选择文件")
+        self.file_info_row.set_title(_("No file selected"))
 
-        change_btn = Gtk.Button(label="更换文件")
+        change_btn = Gtk.Button(label=_("Change File"))
         change_btn.set_valign(Gtk.Align.CENTER)
         change_btn.connect("clicked", self.on_select_file)
         self.file_info_row.add_suffix(change_btn)
         file_group.add(self.file_info_row)
 
-        # 信息显示区域
+        # Info display area
         info_group = Adw.PreferencesGroup()
-        info_group.set_title("主题信息")
+        info_group.set_title(_("Theme Information"))
         content.append(info_group)
 
         theme_name_row = Adw.ActionRow()
-        theme_name_row.set_title("主题名称")
+        theme_name_row.set_title(_("Theme Name"))
         self.theme_name_entry = Gtk.Entry()
-        self.theme_name_entry.set_placeholder_text("未命名主题")
+        self.theme_name_entry.set_placeholder_text(_("Untitled Theme"))
         self.theme_name_entry.set_hexpand(True)
         self.theme_name_entry.set_valign(Gtk.Align.CENTER)
         self.theme_name_model = ThemeNameModel()
@@ -150,18 +149,18 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         info_group.add(theme_name_row)
 
         self.cursor_count_row = Adw.ActionRow()
-        self.cursor_count_row.set_title("光标数量")
+        self.cursor_count_row.set_title(_("Cursor Count"))
         self.cursor_count_row.set_subtitle("--")
         info_group.add(self.cursor_count_row)
 
-        # 选项区域
+        # Options area
         options_group = Adw.PreferencesGroup()
-        options_group.set_title("转换选项")
+        options_group.set_title(_("Conversion Options"))
         content.append(options_group)
 
         shadow_row = Adw.ActionRow()
-        shadow_row.set_title("添加阴影效果")
-        shadow_row.set_subtitle("模拟 Windows 光标阴影")
+        shadow_row.set_title(_("Add Shadow Effect"))
+        shadow_row.set_subtitle(_("Simulate Windows cursor shadow"))
         self.shadow_switch = Gtk.Switch()
         self.shadow_switch.set_valign(Gtk.Align.CENTER)
         shadow_row.add_suffix(self.shadow_switch)
@@ -169,8 +168,8 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         options_group.add(shadow_row)
 
         symlink_row = Adw.ActionRow()
-        symlink_row.set_title("创建符号链接")
-        symlink_row.set_subtitle("为常见光标名称创建符号链接")
+        symlink_row.set_title(_("Create Symbolic Links"))
+        symlink_row.set_subtitle(_("Create symbolic links for common cursor names"))
         self.symlink_switch = Gtk.Switch()
         self.symlink_switch.set_active(True)
         self.symlink_switch.set_valign(Gtk.Align.CENTER)
@@ -178,10 +177,10 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         symlink_row.set_activatable_widget(self.symlink_switch)
         options_group.add(symlink_row)
 
-        # 多尺寸选项
+        # Multi-size options
         size_row = Adw.ExpanderRow()
-        size_row.set_title("生成多尺寸光标")
-        size_row.set_subtitle("选择要生成的尺寸（可多选）")
+        size_row.set_title(_("Generate Multi-Size Cursors"))
+        size_row.set_subtitle(_("Select sizes to generate (multiple selection allowed)"))
         options_group.add(size_row)
 
         # 24x24
@@ -250,21 +249,21 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         size256_row.set_activatable_widget(self.size256_check)
         size_row.add_row(size256_row)
 
-        # 输出目录选择
+        # Output directory selection
         output_row = Adw.ActionRow()
-        output_row.set_title("输出目录")
-        self.output_label = Gtk.Label(label="/tmp/<主题名>")
+        output_row.set_title(_("Output Directory"))
+        self.output_label = Gtk.Label(label=_("/tmp/<theme_name>"))
         self.output_label.add_css_class("dim-label")
         output_row.add_suffix(self.output_label)
 
-        output_btn = Gtk.Button(label="选择目录")
+        output_btn = Gtk.Button(label=_("Select Directory"))
         output_btn.connect("clicked", self.on_select_output)
         output_row.add_suffix(output_btn)
         options_group.add(output_row)
 
-        # 日志区域（最上）
+        # Log area (at the top)
         log_group = Adw.PreferencesGroup()
-        log_group.set_title("转换日志")
+        log_group.set_title(_("Conversion Log"))
         content.append(log_group)
 
         log_scroll = Gtk.ScrolledWindow()
@@ -309,20 +308,20 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.button_box.set_margin_top(10)
         content.append(self.button_box)
 
-        self.convert_btn = Gtk.Button(label="开始转换")
+        self.convert_btn = Gtk.Button(label=_("Start Conversion"))
         self.convert_btn.add_css_class("suggested-action")
         self.convert_btn.add_css_class("pill")
         self.convert_btn.set_sensitive(False)
         self.convert_btn.connect("clicked", self.on_convert)
         self.button_box.append(self.convert_btn)
 
-        self.preview_btn = Gtk.Button(label="查看光标")
+        self.preview_btn = Gtk.Button(label=_("Preview Cursors"))
         self.preview_btn.add_css_class("pill")
         self.preview_btn.set_sensitive(False)
         self.preview_btn.connect("clicked", self.on_preview_cursors)
         self.button_box.append(self.preview_btn)
 
-        self.apply_btn = Gtk.Button(label="安装主题")
+        self.apply_btn = Gtk.Button(label=_("Install Theme"))
         self.apply_btn.add_css_class("pill")
         self.apply_btn.set_sensitive(False)
         self.apply_btn.connect("clicked", self.on_install_theme)
@@ -331,12 +330,12 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         return scroll
 
     def log(self, message: str):
-        """线程安全：将消息放入队列，由主线程统一写入 TextView。"""
+        """Thread-safe: put message in queue, written by main thread to TextView."""
         self._log_queue.put_nowait(message)
         GLib.idle_add(self._flush_log_queue)
 
     def _flush_log_queue(self):
-        """主线程 only：从队列取出所有待写日志，一次性插入并滚动到底部。"""
+        """Main thread only: get all pending log messages from queue, insert at once and scroll to bottom."""
         messages = []
         try:
             while True:
@@ -354,37 +353,37 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
             self.log_view.scroll_to_mark(mark, 0.0, True, 0.0, 1.0)
 
     def on_file_dropped(self, drop_target, value, x, y):
-        """处理拖放的文件"""
+        """Handle dropped file"""
         if isinstance(value, Gio.File):
             file_path = value.get_path()
             if file_path and file_path.lower().endswith('.zip'):
                 self.zip_path = file_path
                 self.file_info_row.set_title(os.path.basename(file_path))
-                self.log(f"已选择文件: {self.zip_path}")
+                self.log(_("Selected file: {}").format(self.zip_path))
 
-                # 更换文件后重置输出目录，使输出路径重新随主题名变化
+                # Reset output directory after changing file, so output path follows theme name
                 self.output_dir = None
 
-                # 切换到配置页面
+                # Switch to config page
                 self.stack.set_visible_child_name("config")
 
-                # 解析 ZIP 文件
+                # Parse ZIP file
                 self.parse_zip()
                 return True
         return False
 
     def on_select_file(self, button):
-        """选择 ZIP 文件"""
+        """Select ZIP file"""
         dialog = Gtk.FileDialog()
-        dialog.set_title("选择光标主题压缩包")
+        dialog.set_title(_("Select Cursor Theme Archive"))
 
-        # 设置文件过滤器
+        # Set file filter
         zip_filter = Gtk.FileFilter()
-        zip_filter.set_name("ZIP 压缩包")
+        zip_filter.set_name(_("ZIP Archive"))
         zip_filter.add_pattern("*.zip")
 
         all_filter = Gtk.FileFilter()
-        all_filter.set_name("所有文件")
+        all_filter.set_name(_("All Files"))
         all_filter.add_pattern("*")
 
         filters = Gio.ListStore.new(Gtk.FileFilter)
@@ -395,28 +394,28 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         dialog.open(self, None, self.on_file_selected)
 
     def on_file_selected(self, dialog, result):
-        """文件选择完成"""
+        """File selection completed"""
         try:
             file = dialog.open_finish(result)
             if file:
                 self.zip_path = file.get_path()
                 self.file_info_row.set_title(os.path.basename(self.zip_path))
-                self.log(f"已选择文件: {self.zip_path}")
+                self.log(_("Selected file: {}").format(self.zip_path))
 
-                # 更换文件后重置输出目录，使输出路径重新随主题名变化
+                # Reset output directory after changing file, so output path follows theme name
                 self.output_dir = None
 
-                # 切换到配置页面
+                # Switch to config page
                 self.stack.set_visible_child_name("config")
 
-                # 解析 ZIP 文件
+                # Parse ZIP file
                 self.parse_zip()
         except GLib.Error as e:
             if e.code != 2:  # 2 = dismissed
-                self.log(f"错误: {e.message}")
+                self.log(_("Error: {}").format(e.message))
 
     def detect_zip_encoding(self, zip_path):
-        """检测 ZIP 文件的编码"""
+        """Detect ZIP file encoding"""
         with zipfile.ZipFile(zip_path, "r") as z:
             for info in z.infolist():
                 if info.flag_bits & 0x800:
@@ -424,39 +423,39 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
             return "gbk"
 
     def parse_zip(self):
-        """解析 ZIP 文件"""
+        """Parse ZIP file"""
         try:
-            # 清理旧的临时目录
+            # Clean up old temporary directory
             if self.temp_dir and os.path.exists(self.temp_dir):
                 shutil.rmtree(self.temp_dir)
 
-            # 创建临时目录
+            # Create temporary directory
             self.temp_dir = tempfile.mkdtemp(prefix="win2xcur_")
 
             if not self.zip_path:
-                self.log("错误: 未选择文件")
+                self.log(_("Error: No file selected"))
                 return
 
-            # 检测 ZIP 编码
+            # Detect ZIP encoding
             encoding = self.detect_zip_encoding(self.zip_path)
-            self.log(f"检测到 ZIP 编码: {encoding.upper()}")
+            self.log(_("Detected ZIP encoding: {}").format(encoding.upper()))
 
-            # 解压 ZIP
-            self.log("正在解压文件...")
+            # Extract ZIP
+            self.log(_("Extracting files..."))
             with zipfile.ZipFile(self.zip_path, "r") as zip_ref:
                 if encoding == "gbk":
-                    # 使用 GBK 编码解压
+                    # Extract with GBK encoding
                     for member in zip_ref.namelist():
                         try:
                             member_name = member.encode('cp437').decode('gbk')
                         except Exception:
                             member_name = member
 
-                        # 提取文件
+                        # Extract file
                         source = zip_ref.open(member)
                         target_path = os.path.join(self.temp_dir, member_name)
 
-                        # 如果是目录
+                        # If it's a directory
                         if member_name.endswith('/'):
                             os.makedirs(target_path, exist_ok=True)
                         else:
@@ -464,10 +463,10 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                             with open(target_path, 'wb') as target:
                                 shutil.copyfileobj(source, target)
                 else:
-                    # UTF-8 编码，直接解压
+                    # UTF-8 encoding, extract directly
                     zip_ref.extractall(self.temp_dir)
 
-            # 查找 INF 文件
+            # Search for INF file
             inf_files = []
             for root, dirs, files in os.walk(self.temp_dir):
                 for file in files:
@@ -475,111 +474,111 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                         inf_files.append(os.path.join(root, file))
 
             if not inf_files:
-                self.log("错误: 未找到 INF 文件")
+                self.log(_("Error: No INF file found"))
                 return
 
-            # 使用第一个 INF 文件
+            # Use the first INF file
             inf_path = inf_files[0]
-            self.inf_dir = os.path.dirname(inf_path)  # 保存 INF 所在目录
-            self.log(f"找到 INF 文件: {os.path.basename(inf_path)}")
+            self.inf_dir = os.path.dirname(inf_path)  # Save INF file directory
+            self.log(_("Found INF file: {}").format(os.path.basename(inf_path)))
 
-            # 解析 INF
+            # Parse INF
             self.inf_parser = INFParser(inf_path)
             if self.inf_parser.parse():
                 self.cursor_count_row.set_subtitle(
                     str(len(self.inf_parser.cursor_files))
                 )
-                self.log(f"主题名称: {self.inf_parser.theme_name}")
-                self.log(f"找到 {len(self.inf_parser.cursor_files)} 个光标")
-                # 主题名：GObject 属性，已与 Entry 绑定，这里只设初始值
+                self.log(_("Theme name: {}").format(self.inf_parser.theme_name))
+                self.log(_("Found {} cursors").format(len(self.inf_parser.cursor_files)))
+                # Theme name: GObject property, bound to Entry, just set initial value here
                 self.theme_name_model.set_property("theme-name", self.inf_parser.theme_name)
 
-                # 未手动选择输出目录时，显示默认路径
+                # Show default path when output directory is not manually selected
                 if not self.output_dir:
                     self.output_label.set_text(f"/tmp/{self.get_theme_name_for_path()}")
 
-                # 显示光标映射
+                # Show cursor mapping
                 for win_type, filename in self.inf_parser.cursor_files.items():
                     xcursor_name = WIN_TO_XCURSOR.get(win_type, win_type)
                     self.log(f"  {win_type} -> {xcursor_name}: {filename}")
 
                 self.convert_btn.set_sensitive(True)
             else:
-                self.log("错误: 无法解析 INF 文件")
+                self.log(_("Error: Cannot parse INF file"))
 
         except Exception as e:
-            self.log(f"解析错误: {e}")
+            self.log(_("Parse error: {}").format(e))
             import traceback
             traceback.print_exc()
 
     def _on_theme_name_notify(self, obj, pspec):
-        """主题名称属性变化时更新默认输出路径显示"""
+        """Update default output path display when theme name property changes"""
         if not self.output_dir and self.inf_parser:
-            name = self.get_theme_name_for_path() or "未命名主题"
+            name = self.get_theme_name_for_path() or _("Untitled Theme")
             self.output_label.set_text(f"/tmp/{name}")
 
     def get_theme_name(self):
-        """当前主题名称：来自与 Entry 绑定的 GObject 属性。"""
+        """Current theme name: from GObject property bound to Entry."""
         name = (self.theme_name_model.get_property("theme-name") or "").strip()
-        return name if name else "未命名主题"
+        return name if name else _("Untitled Theme")
 
     def get_theme_name_for_path(self):
-        """获取用于路径的主题名（去除非法字符）"""
+        """Get theme name for path (remove illegal characters)"""
         name = self.get_theme_name()
-        return re.sub(r'[/\\:*?"<>|]', '_', name) or "未命名主题"
+        return re.sub(r'[/\\:*?"<>|]', '_', name) or _("Untitled Theme")
 
     def on_select_output(self, button):
-        """选择输出目录"""
+        """Select output directory"""
         dialog = Gtk.FileDialog()
-        dialog.set_title("选择输出目录")
+        dialog.set_title(_("Select Output Directory"))
         dialog.select_folder(self, None, self.on_output_selected)
 
     def on_output_selected(self, dialog, result):
-        """输出目录选择完成"""
+        """Output directory selection completed"""
         try:
             folder = dialog.select_folder_finish(result)
             if folder:
                 self.output_dir = folder.get_path()
                 self.output_label.set_text(self.output_dir)
-                self.log(f"输出目录: {self.output_dir}")
+                self.log(_("Output directory: {}").format(self.output_dir))
         except GLib.Error as e:
             if e.code != 2:
-                self.log(f"错误: {e.message}")
+                self.log(_("Error: {}").format(e.message))
 
     def on_convert(self, button):
-        """开始转换"""
+        """Start conversion"""
         if not self.inf_parser:
-            self.log("错误: 未选择主题文件")
+            self.log(_("Error: No theme file selected"))
             return
 
-        # 确定输出目录（默认使用 /tmp）
+        # Determine output directory (use /tmp by default)
         if not self.output_dir:
             self.output_dir = os.path.join("/tmp", self.get_theme_name_for_path())
 
         cursors_dir = os.path.join(self.output_dir, "cursors")
         os.makedirs(cursors_dir, exist_ok=True)
 
-        self.log(f"\n开始转换到: {cursors_dir}")
+        self.log(_("\nStarting conversion to: {}").format(cursors_dir))
         self.button_box.set_visible(False)
         self.progress_clamp.set_visible(True)
         self.progress_bar.set_fraction(0.0)
-        self.progress_label.set_text("准备转换...")
+        self.progress_label.set_text(_("Preparing conversion..."))
 
-        # 检查 win2xcur 是否可用
+        # Check if win2xcur is available
         try:
             from win2xcur.parser import open_blob
             from win2xcur.writer import to_x11
 
-            self.log("✓ 找到 win2xcur 模块")
+            self.log(_("✓ Found win2xcur module"))
         except ImportError:
-            self.log("✗ 未找到 win2xcur 模块")
-            self.log("请安装: pip install win2xcur")
+            self.log(_("✗ win2xcur module not found"))
+            self.log(_("Please install: pip install win2xcur"))
             self.progress_clamp.set_visible(False)
             self.button_box.set_visible(True)
             self.convert_btn.set_sensitive(True)
             return
 
-        # 在后台线程中执行转换，避免阻塞 UI
+        # Execute conversion in background thread to avoid blocking UI
         def run():
             self._do_conversion_worker(cursors_dir)
 
@@ -587,14 +586,14 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         thread.start()
 
     def _update_ui_progress(self, fraction: float, text: str):
-        """在主线程更新进度条和标签（仅由 GLib.idle_add 调用）"""
+        """Update progress bar and label in main thread (called by GLib.idle_add only)"""
         self.progress_bar.set_fraction(fraction)
         self.progress_label.set_text(text)
 
     def _do_conversion_worker(self, cursors_dir):
-        """在后台线程中执行的实际转换逻辑"""
+        """Actual conversion logic executed in background thread"""
         try:
-            # 获取用户选择的目标尺寸
+            # Get user-selected target sizes
             target_sizes = []
             if self.size24_check.get_active():
                 target_sizes.append(24)
@@ -612,11 +611,11 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                 target_sizes.append(256)
 
             if not target_sizes:
-                self.log("✗ 请至少选择一个目标尺寸")
+                self.log(_("✗ Please select at least one target size"))
                 GLib.idle_add(self._on_conversion_error)
                 return
 
-            self.log(f"目标尺寸: {', '.join(str(s) for s in target_sizes)}")
+            self.log(_("Target sizes: {}").format(', '.join(str(s) for s in target_sizes)))
 
             total = len(self.inf_parser.cursor_files)
             converted = 0
@@ -625,20 +624,20 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
             for win_type, filename in self.inf_parser.cursor_files.items():
                 xcursor_name = WIN_TO_XCURSOR.get(win_type)
                 if not xcursor_name:
-                    self.log(f"跳过未映射的类型: {win_type}")
+                    self.log(_("Skipping unmapped type: {}").format(win_type))
                     continue
 
                 output_file = os.path.join(cursors_dir, xcursor_name)
 
-                # 进度更新到主线程
+                # Update progress to main thread
                 frac = (converted + 1) / total
                 GLib.idle_add(
                     lambda f=frac, cn=converted+1, tot=total, fn=filename:
-                    self._update_ui_progress(f, f"正在转换 {cn}/{tot}: {fn}")
+                    self._update_ui_progress(f, _("Converting {}/{}: {}").format(cn, tot, fn))
                 )
-                self.log(f"转换: {filename} -> {xcursor_name}")
+                self.log(_("Converting: {} -> {}").format(filename, xcursor_name))
 
-                # 使用转换器进行转换
+                # Use converter for conversion
                 success = self.converter.convert_cursor(
                     cursor_file=filename,
                     output_file=output_file,
@@ -652,38 +651,38 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                     converted += 1
                     GLib.idle_add(
                         lambda c=converted, t=total:
-                        self._update_ui_progress(c / t, f"正在转换 {c}/{t}")
+                        self._update_ui_progress(c / t, _("Converting {}/{}").format(c, t))
                     )
 
-            # 创建符号链接
+            # Create symbolic links
             if self.symlink_switch.get_active():
                 GLib.idle_add(
                     lambda c=converted, t=total:
-                    self._update_ui_progress(c / t if t else 1.0, "正在创建符号链接...")
+                    self._update_ui_progress(c / t if t else 1.0, _("Creating symbolic links..."))
                 )
-                self.log("\n创建符号链接...")
+                self.log(_("\nCreating symbolic links..."))
                 self.converter.create_symlinks(cursors_dir)
 
-            # 创建 index.theme
+            # Create index.theme
             GLib.idle_add(
-                lambda: self._update_ui_progress(1.0, "正在创建主题配置...")
+                lambda: self._update_ui_progress(1.0, _("Creating theme config..."))
             )
             self.converter.create_index_theme(self.output_dir, self.get_theme_name())
 
-            self.log(f"\n✓ 转换完成! 成功转换 {converted}/{total} 个光标")
-            self.log(f"主题位置: {self.output_dir}")
-            self.log("\n转换完成！如需安装到系统，请点击【安装主题】按钮")
+            self.log(_("\n✓ Conversion complete! Successfully converted {}/{} cursors").format(converted, total))
+            self.log(_("Theme location: {}").format(self.output_dir))
+            self.log(_("\nConversion complete! Click [Install Theme] button to install to system"))
 
             GLib.idle_add(self._on_conversion_done)
 
         except Exception as e:
-            self.log(f"\n✗ 转换过程出错: {e}")
+            self.log(_("\n✗ Error during conversion: {}").format(e))
             import traceback
             traceback.print_exc()
             GLib.idle_add(self._on_conversion_error)
 
     def _on_conversion_done(self):
-        """转换成功，在主线程恢复 UI"""
+        """Conversion successful, restore UI in main thread"""
         self.progress_clamp.set_visible(False)
         self.button_box.set_visible(True)
         self.convert_btn.set_sensitive(True)
@@ -691,7 +690,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.apply_btn.set_sensitive(True)
 
     def _on_conversion_error(self):
-        """转换出错，在主线程恢复 UI"""
+        """Conversion error, restore UI in main thread"""
         self.progress_clamp.set_visible(False)
         self.button_box.set_visible(True)
         self.convert_btn.set_sensitive(True)
@@ -699,25 +698,25 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.apply_btn.set_sensitive(False)
 
     def on_preview_cursors(self, button):
-        """打开光标预览对话框（参考 xcursor-viewer，动态指针按动态图连续播放）"""
+        """Open cursor preview dialog (reference xcursor-viewer, animated cursors play continuously)"""
         if not self.output_dir:
-            self.log("错误: 请先完成转换")
+            self.log(_("Error: Please complete conversion first"))
             return
         cursors_dir = os.path.join(self.output_dir, "cursors")
         if not os.path.isdir(cursors_dir):
-            self.log("错误: 未找到 cursors 目录")
+            self.log(_("Error: cursors directory not found"))
             return
         dialog = CursorPreviewDialog(cursors_dir=cursors_dir)
         dialog.present(self)
 
     def on_install_theme(self, button):
-        """安装主题到用户图标目录（仅复制文件，不修改系统/桌面主题设置）"""
+        """Install theme to user icon directory (only copy files, don't modify system/desktop theme settings)"""
         if not self.inf_parser or not self.output_dir:
-            self.log("错误: 请先转换主题")
+            self.log(_("Error: Please convert theme first"))
             return
 
         self.apply_btn.set_sensitive(False)
-        self.log("\n开始安装主题到系统...")
+        self.log(_("\nStarting theme installation to system..."))
 
         data_home = os.environ.get(
             "XDG_DATA_HOME",
@@ -731,25 +730,25 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         target_dir = os.path.join(icons_dir, self.get_theme_name_for_path())
 
         try:
-            # 如果目标已存在，先删除
+            # If target already exists, delete it first
             if os.path.exists(target_dir):
                 shutil.rmtree(target_dir)
 
-            # 复制主题文件
-            self.log(f"复制主题到: {target_dir}")
+            # Copy theme files
+            self.log(_("Copying theme to: {}").format(target_dir))
             shutil.copytree(self.output_dir, target_dir, symlinks=True)
-            self.log("✓ 主题已安装，请在系统设置中手动选择该光标主题")
+            self.log(_("✓ Theme installed, please manually select this cursor theme in system settings"))
 
             self.apply_btn.set_sensitive(True)
 
         except Exception as e:
-            self.log(f"✗ 安装失败: {e}")
+            self.log(_("✗ Installation failed: {}").format(e))
             import traceback
             traceback.print_exc()
             self.apply_btn.set_sensitive(True)
 
     def do_close_request(self):
-        """窗口关闭时清理"""
+        """Cleanup when window closes"""
         if self.temp_dir and os.path.exists(self.temp_dir):
             try:
                 shutil.rmtree(self.temp_dir)

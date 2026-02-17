@@ -1,11 +1,14 @@
-"""Windows INF 文件解析模块"""
+"""Windows INF file parser module"""
 
 import re
+import gettext
 from .constants import WIN_CURSOR_ORDER
+
+_ = gettext.gettext
 
 
 class INFParser:
-    """解析 Windows INF 光标主题安装文件"""
+    """Parse Windows INF cursor theme installation file"""
 
     def __init__(self, inf_path: str):
         self.inf_path = inf_path
@@ -13,9 +16,9 @@ class INFParser:
         self.cursor_files = {}
 
     def parse(self) -> bool:
-        """解析 INF 文件"""
+        """Parse INF file"""
         try:
-            # 读取文件内容，尝试多种编码
+            # Read file content, try multiple encodings
             content = None
             for encoding in ["utf-8", "gbk", "gb2312", "utf-16", "latin1"]:
                 try:
@@ -28,60 +31,60 @@ class INFParser:
             if content is None:
                 return False
 
-            # 统一转换为小写，避免大小写问题
+            # Convert to lowercase uniformly to avoid case sensitivity issues
             content = content.lower()
 
-            # 使用正则表达式解析
+            # Parse using regular expressions
             strings_section = self._extract_section(content, "strings")
             addreg_sections = self._get_addreg_sections(content)
             theme_value, scheme_reg = self._extract_scheme_reg(content, addreg_sections)
 
-            # 解析 Strings 段（如果存在）
+            # Parse Strings section (if exists)
             string_vars = {}
             if strings_section:
                 string_vars = self._parse_strings(strings_section)
 
-            # 获取主题名称：检查是否使用变量
+            # Get theme name: check if using variables
             if theme_value:
                 if '%' in theme_value:
-                    # 使用变量：从 Strings 查找
+                    # Using variable: lookup from Strings
                     var_match = re.search(r'%(\w+)%', theme_value)
                     if var_match:
                         var_name = var_match.group(1).lower()
                         if var_name in string_vars:
                             self.theme_name = string_vars[var_name]
                         else:
-                            self.theme_name = "未命名主题"
+                            self.theme_name = _("Untitled Theme")
                     else:
-                        self.theme_name = "未命名主题"
+                        self.theme_name = _("Untitled Theme")
                 else:
                     self.theme_name = theme_value
             else:
-                self.theme_name = "未命名主题"
+                self.theme_name = _("Untitled Theme")
 
-            # 解析 Scheme.Reg 中的光标映射
+            # Parse cursor mapping in Scheme.Reg
             if scheme_reg:
                 self._parse_cursor_mapping(scheme_reg, string_vars)
 
             return True
 
         except Exception as e:
-            print(f"解析 INF 文件错误: {e}")
+            print(_("Error parsing INF file: {}").format(e))
             import traceback
 
             traceback.print_exc()
             return False
 
     def _extract_section(self, content: str, section_name: str):
-        """提取指定段落的内容（section_name 应为小写）"""
+        """Extract specified section content (section_name should be lowercase)"""
         pattern = rf"\[{section_name}\](.*?)(?=\n\[|\Z)"
         match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
         return match.group(1).strip() if match else None
 
     def _get_addreg_sections(self, content: str) -> list[str]:
-        """从 [DefaultInstall] 中解析 AddReg 指定的段名列表。
+        """Parse AddReg specified section name list from [DefaultInstall].
 
-        例如 AddReg = Scheme.Reg,Wreg 返回 ['scheme.reg', 'wreg']。
+        For example, AddReg = Scheme.Reg,Wreg returns ['scheme.reg', 'wreg'].
         """
         default_install = self._extract_section(content, "defaultinstall")
         if not default_install:
@@ -91,23 +94,23 @@ class INFParser:
             line = line.strip()
             if not line or line.startswith(";"):
                 continue
-            # 匹配 AddReg = value 或 AddReg=value，value 可能含逗号
+            # Match AddReg = value or AddReg=value, value may contain commas
             m = re.match(r"addreg\s*=\s*(.+)", line, re.IGNORECASE)
             if m:
                 value = m.group(1).strip()
-                # 按逗号分隔，去掉空白，并统一为小写以匹配 _extract_section
+                # Split by comma, strip whitespace, and convert to lowercase to match _extract_section
                 return [s.strip().lower() for s in value.split(",") if s.strip()]
         return []
 
     def _extract_scheme_reg(self, content: str, addreg_sections: list[str]):
-        """从 AddReg 指定的段落中查找 HKCU + Control Panel\\Cursors\\Schemes 行，提取主题名和光标列表。
+        """Find HKCU + Control Panel\\Cursors\\Schemes line from AddReg specified sections, extract theme name and cursor list.
 
-        返回: (theme_name_or_var, cursor_list)
-        - theme_name_or_var: 主题名称（可能是变量名或直接值）
-        - cursor_list: 光标列表字符串（可能包含变量或直接文件名）
+        Returns: (theme_name_or_var, cursor_list)
+        - theme_name_or_var: theme name (might be variable name or direct value)
+        - cursor_list: cursor list string (might contain variables or direct filenames)
         """
         for section_name in addreg_sections:
-            # 段名在 INF 里通常带方括号，且大小写可能任意，content 已转小写故用 section_name 小写
+            # Section name in INF usually has brackets, and case may vary, content has been converted to lowercase so use lowercase section_name
             pattern = rf"\[{re.escape(section_name)}\](.*?)(?=\n\[|\Z)"
             match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
             if not match:
@@ -136,13 +139,13 @@ class INFParser:
         return (None, None)
 
     def _parse_strings(self, strings_content: str):
-        """解析 Strings 段落中的变量定义（已转为小写）"""
+        """Parse variable definitions in Strings section (already converted to lowercase)"""
         result = {}
         for line in strings_content.split("\n"):
             line = line.strip()
             if not line or line.startswith(";"):
                 continue
-            # 匹配 key = "value" 或 key = value
+            # Match key = "value" or key = value
             match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
             if match:
                 key, value = match.groups()
@@ -150,7 +153,7 @@ class INFParser:
         return result
 
     def _parse_cursor_mapping(self, scheme_reg: str, string_vars):
-        # 按逗号分隔
+        # Split by comma
         parts = scheme_reg.split(',')
 
         cursor_index = 0
@@ -162,7 +165,7 @@ class INFParser:
             if cursor_index >= len(WIN_CURSOR_ORDER):
                 break
 
-            # 按反斜杠分隔，取最后一个元素
+            # Split by backslash, take last element
             segments = part.split('\\')
             last_segment = segments[-1].strip()
 
@@ -171,9 +174,9 @@ class INFParser:
 
             win_cursor_type = WIN_CURSOR_ORDER[cursor_index]
 
-            # 检查是否是变量
+            # Check if it's a variable
             if '%' in last_segment:
-                # 提取变量名
+                # Extract variable name
                 var_match = re.search(r'%(\w+)%', last_segment)
                 if var_match:
                     var_name = var_match.group(1).lower()
@@ -181,7 +184,7 @@ class INFParser:
                         self.cursor_files[win_cursor_type] = string_vars[var_name]
                         cursor_index += 1
             else:
-                # 直接的文件名
+                # Direct filename
                 if last_segment.lower().endswith(('.cur', '.ani')):
                     self.cursor_files[win_cursor_type] = last_segment
                     cursor_index += 1

@@ -1,11 +1,14 @@
 import sys
 import gi
+import gettext
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 
 from gi.repository import Gio, Adw
 from .window import Win2xcurGuiWindow
+
+_ = gettext.gettext
 
 
 class Win2xcurGuiApplication(Adw.Application):

@@ -1,0 +1,407 @@
+# Chinese translations for win2xcur-gui package.
+# Copyright (C) 2026 THE win2xcur-gui'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the win2xcur-gui package.
+#  <ayasa0520@gmail.com>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: win2xcur-gui 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/ayasa520/win2xcur-gui/issues\n"
+"POT-Creation-Date: 2026-02-17 09:40+0800\n"
+"PO-Revision-Date: 2026-02-17 09:42+0800\n"
+"Last-Translator:  <ayasa520@gmail.com>\n"
+"Language-Team: Chinese (simplified) <i18n-zh@googlegroups.com>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/main.py:42
+msgid "translator-credits"
+msgstr "translator-credits"
+
+#: src/window.py:29 src/window.py:79
+msgid "Windows Cursor Theme Converter"
+msgstr "Windows 光标主题转换工具"
+
+#: src/window.py:80
+msgid ""
+"Drag in a ZIP file or click the button to select a file\n"
+"Supports .cur and .ani formats"
+msgstr ""
+"拖入 ZIP 压缩包或点击按钮选择文件\n"
+"支持 .cur 和 .ani 格式"
+
+#: src/window.py:90
+msgid "Select ZIP File"
+msgstr "选择 ZIP 文件"
+
+#: src/window.py:119
+msgid "Current File"
+msgstr "当前文件"
+
+#: src/window.py:123
+msgid "No file selected"
+msgstr "未选择文件"
+
+#: src/window.py:125
+msgid "Change File"
+msgstr "更换文件"
+
+#: src/window.py:133
+msgid "Theme Information"
+msgstr "主题信息"
+
+#: src/window.py:137 src/models.py:12
+msgid "Theme Name"
+msgstr "主题名称"
+
+#: src/window.py:139 src/window.py:519 src/window.py:525 src/window.py:530
+#: src/inf_parser.py:57 src/inf_parser.py:59 src/inf_parser.py:63
+msgid "Untitled Theme"
+msgstr "未命名主题"
+
+#: src/window.py:154
+msgid "Cursor Count"
+msgstr "光标数量"
+
+#: src/window.py:160
+msgid "Conversion Options"
+msgstr "转换选项"
+
+#: src/window.py:164
+msgid "Add Shadow Effect"
+msgstr "添加阴影效果"
+
+#: src/window.py:165
+msgid "Simulate Windows cursor shadow"
+msgstr "模拟 Windows 光标阴影"
+
+#: src/window.py:173
+msgid "Create Symbolic Links"
+msgstr "创建符号链接"
+
+#: src/window.py:174
+msgid "Create symbolic links for common cursor names"
+msgstr "为常见光标名称创建符号链接"
+
+#: src/window.py:184
+msgid "Generate Multi-Size Cursors"
+msgstr "生成多尺寸光标"
+
+#: src/window.py:185
+msgid "Select sizes to generate (multiple selection allowed)"
+msgstr "选择要生成的尺寸（可多选）"
+
+#: src/window.py:256
+msgid "Output Directory"
+msgstr "输出目录"
+
+#: src/window.py:257
+msgid "/tmp/<theme_name>"
+msgstr "/tmp/<主题名>"
+
+#: src/window.py:261
+msgid "Select Directory"
+msgstr "选择目录"
+
+#: src/window.py:268
+msgid "Conversion Log"
+msgstr "转换日志"
+
+#: src/window.py:313
+msgid "Start Conversion"
+msgstr "开始转换"
+
+#: src/window.py:320 src/cursor_preview.py:149
+msgid "Preview Cursors"
+msgstr "预览光标"
+
+#: src/window.py:326
+msgid "Install Theme"
+msgstr "安装主题"
+
+#: src/window.py:364 src/window.py:405
+#, python-brace-format
+msgid "Selected file: {}"
+msgstr "已选择文件: {}"
+
+#: src/window.py:380
+msgid "Select Cursor Theme Archive"
+msgstr "选择光标主题压缩包"
+
+#: src/window.py:384
+msgid "ZIP Archive"
+msgstr "ZIP 压缩包"
+
+#: src/window.py:388
+msgid "All Files"
+msgstr "所有文件"
+
+#: src/window.py:417 src/window.py:548
+#, python-brace-format
+msgid "Error: {}"
+msgstr "错误: {}"
+
+#: src/window.py:438
+msgid "Error: No file selected"
+msgstr "错误: 未选择文件"
+
+#: src/window.py:443
+#, python-brace-format
+msgid "Detected ZIP encoding: {}"
+msgstr "检测到 ZIP 编码: {}"
+
+#: src/window.py:446
+msgid "Extracting files..."
+msgstr "正在解压文件..."
+
+#: src/window.py:479
+msgid "Error: No INF file found"
+msgstr "错误: 未找到 INF 文件"
+
+#: src/window.py:485
+#, python-brace-format
+msgid "Found INF file: {}"
+msgstr "找到 INF 文件: {}"
+
+#: src/window.py:493
+#, python-brace-format
+msgid "Theme name: {}"
+msgstr "主题名称: {}"
+
+#: src/window.py:494
+#, python-brace-format
+msgid "Found {} cursors"
+msgstr "找到 {} 个光标"
+
+#: src/window.py:509
+msgid "Error: Cannot parse INF file"
+msgstr "错误: 无法解析 INF 文件"
+
+#: src/window.py:512
+#, python-brace-format
+msgid "Parse error: {}"
+msgstr "解析错误: {}"
+
+#: src/window.py:535
+msgid "Select Output Directory"
+msgstr "选择输出目录"
+
+#: src/window.py:545
+#, python-brace-format
+msgid "Output directory: {}"
+msgstr "输出目录: {}"
+
+#: src/window.py:553
+msgid "Error: No theme file selected"
+msgstr "错误: 未选择主题文件"
+
+#: src/window.py:563
+#, python-brace-format
+msgid ""
+"\n"
+"Starting conversion to: {}"
+msgstr ""
+"\n"
+"开始转换到: {}"
+
+#: src/window.py:567
+msgid "Preparing conversion..."
+msgstr "准备转换..."
+
+#: src/window.py:574
+msgid "✓ Found win2xcur module"
+msgstr "✓ 找到 win2xcur 模块"
+
+#: src/window.py:576 src/converter.py:52
+msgid "✗ win2xcur module not found"
+msgstr "✗ 未找到 win2xcur 模块"
+
+#: src/window.py:577 src/converter.py:53
+msgid "Please install: pip install win2xcur"
+msgstr "请安装: pip install win2xcur"
+
+#: src/window.py:616
+msgid "✗ Please select at least one target size"
+msgstr "✗ 请至少选择一个目标尺寸"
+
+#: src/window.py:620
+#, python-brace-format
+msgid "Target sizes: {}"
+msgstr "目标尺寸: {}"
+
+#: src/window.py:629
+#, python-brace-format
+msgid "Skipping unmapped type: {}"
+msgstr "跳过未映射的类型: {}"
+
+#: src/window.py:638
+#, python-brace-format
+msgid "Converting {}/{}: {}"
+msgstr "正在转换 {}/{}: {}"
+
+#: src/window.py:640
+#, python-brace-format
+msgid "Converting: {} -> {}"
+msgstr "转换: {} -> {}"
+
+#: src/window.py:656
+#, python-brace-format
+msgid "Converting {}/{}"
+msgstr "正在转换 {}/{}"
+
+#: src/window.py:663
+msgid "Creating symbolic links..."
+msgstr "正在创建符号链接..."
+
+#: src/window.py:665
+msgid ""
+"\n"
+"Creating symbolic links..."
+msgstr ""
+"\n"
+"创建符号链接..."
+
+#: src/window.py:670
+msgid "Creating theme config..."
+msgstr "正在创建主题配置..."
+
+#: src/window.py:674
+#, python-brace-format
+msgid ""
+"\n"
+"✓ Conversion complete! Successfully converted {}/{} cursors"
+msgstr ""
+"\n"
+"✓ 转换完成! 成功转换 {}/{} 个光标"
+
+#: src/window.py:675
+#, python-brace-format
+msgid "Theme location: {}"
+msgstr "主题位置: {}"
+
+#: src/window.py:676
+msgid ""
+"\n"
+"Conversion complete! Click [Install Theme] button to install to system"
+msgstr ""
+"\n"
+"转换完成！如需安装到系统，请点击【安装主题】按钮"
+
+#: src/window.py:681
+#, python-brace-format
+msgid ""
+"\n"
+"✗ Error during conversion: {}"
+msgstr ""
+"\n"
+"✗ 转换过程出错: {}"
+
+#: src/window.py:705
+msgid "Error: Please complete conversion first"
+msgstr "错误: 请先完成转换"
+
+#: src/window.py:709
+msgid "Error: cursors directory not found"
+msgstr "错误: 未找到 cursors 目录"
+
+#: src/window.py:717
+msgid "Error: Please convert theme first"
+msgstr "错误: 请先转换主题"
+
+#: src/window.py:721
+msgid ""
+"\n"
+"Starting theme installation to system..."
+msgstr ""
+"\n"
+"开始安装主题到系统..."
+
+#: src/window.py:740
+#, python-brace-format
+msgid "Copying theme to: {}"
+msgstr "复制主题到: {}"
+
+#: src/window.py:742
+msgid ""
+"✓ Theme installed, please manually select this cursor theme in system "
+"settings"
+msgstr "✓ 主题已安装，请在系统设置中手动选择该光标主题"
+
+#: src/window.py:747
+#, python-brace-format
+msgid "✗ Installation failed: {}"
+msgstr "✗ 安装失败: {}"
+
+#: src/inf_parser.py:72
+#, python-brace-format
+msgid "Error parsing INF file: {}"
+msgstr "解析 INF 文件错误: {}"
+
+#: src/converter.py:71
+#, python-brace-format
+msgid "✗ File not found: {}"
+msgstr "✗ 未找到文件: {}"
+
+#: src/converter.py:85
+#, python-brace-format
+msgid "  Original file sizes: {}"
+msgstr "  原文件尺寸: {}"
+
+#: src/converter.py:106
+#, python-brace-format
+msgid "  Using original {}x{} ({} frames)"
+msgstr "  使用原始 {}x{} ({} 帧)"
+
+#: src/converter.py:110
+#, python-brace-format
+msgid "  ✗ Cannot generate {}x{}: original file has no valid sizes"
+msgstr "  ✗ 无法生成 {}x{}：原文件无有效尺寸"
+
+#: src/converter.py:140
+#, python-brace-format
+msgid "  Scaled to generate {}x{} (from {}x{}, {} frames)"
+msgstr "  缩放生成 {}x{} (从 {}x{}, {} 帧)"
+
+#: src/converter.py:168
+#, python-brace-format
+msgid "✗ Failed to generate any sizes: {}"
+msgstr "✗ 未能生成任何尺寸: {}"
+
+#: src/converter.py:178
+#, python-brace-format
+msgid "  ✓ Generated cursor file with {} sizes ({} frames)"
+msgstr "  ✓ 生成包含 {} 个尺寸的光标文件（{} 帧）"
+
+#: src/converter.py:182
+#, python-brace-format
+msgid "✗ Conversion failed {}: {}"
+msgstr "✗ 转换失败 {}: {}"
+
+#: src/converter.py:209
+#, python-brace-format
+msgid "✓ Created {} symbolic links"
+msgstr "✓ 创建了 {} 个符号链接"
+
+#: src/converter.py:230
+msgid "✓ Created index.theme"
+msgstr "✓ 创建 index.theme"
+
+#: src/converter.py:233
+#, python-brace-format
+msgid "Failed to create index.theme: {}"
+msgstr "创建 index.theme 失败: {}"
+
+#: src/cursor_preview.py:187
+msgid "Select cursor on the left to preview"
+msgstr "选择左侧光标以预览"
+
+#: src/cursor_preview.py:261
+#, python-brace-format
+msgid ""
+"{}\n"
+"(Cannot parse or not Xcursor)"
+msgstr ""
+"{}\n"
+"（无法解析或非 Xcursor）"

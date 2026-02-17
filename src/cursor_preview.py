@@ -1,16 +1,18 @@
 import os
 import threading
 import gi
+import gettext
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gtk, Adw, GLib, Gdk, GdkPixbuf
 
+_ = gettext.gettext
 
-# 预览区显示边长（像素），小图用 NEAREST 放大、大图用 BILINEAR 缩小以保持清晰
+# Preview area display edge length (pixels), small images use NEAREST for scaling up, large images use BILINEAR for scaling down to maintain clarity
 DISPLAY_PIXEL_SIZE = 128
 
 
 def _cursor_image_to_pixbuf(cursor_image) -> GdkPixbuf.Pixbuf | None:
-    """将 win2xcur CursorImage 转为 GdkPixbuf（BGRA -> RGBA）。"""
+    """Convert win2xcur CursorImage to GdkPixbuf (BGRA -> RGBA)."""
     try:
         w = cursor_image.image.width
         h = cursor_image.image.height
@@ -38,12 +40,12 @@ def _cursor_image_to_pixbuf(cursor_image) -> GdkPixbuf.Pixbuf | None:
 
 
 def _pixbuf_for_display(pb: GdkPixbuf.Pixbuf, size: int = DISPLAY_PIXEL_SIZE) -> GdkPixbuf.Pixbuf:
-    """缩放到预览尺寸，小图用 NEAREST 放大防模糊，大图用 BILINEAR 缩小。"""
+    """Scale to preview size, small images use NEAREST for scaling up to prevent blurring, large images use BILINEAR for scaling down."""
     w, h = pb.get_width(), pb.get_height()
     if w == size and h == size:
         return pb
     if w <= size and h <= size:
-        # 不设上限，小光标放大到 size（如 32→128）
+        # No upper limit, scale up small cursors to size (e.g. 32→128)
         scale = max(1, min(size // w, size // h))
         nw, nh = w * scale, h * scale
         return pb.scale_simple(nw, nh, GdkPixbuf.InterpType.NEAREST)
@@ -54,8 +56,8 @@ def load_cursor_frames(
     cursor_path: str,
 ) -> list[tuple[GdkPixbuf.Pixbuf, float]] | None:
     """
-    加载 .cursor 文件，返回最大可用尺寸下的 (pixbuf, delay_sec) 列表。
-    用最大尺寸避免放大小图导致模糊；多帧按 delay 连续播放。
+    Load .cursor file, return (pixbuf, delay_sec) list at maximum available size.
+    Use maximum size to avoid blurring from scaling up small images; multiple frames play continuously by delay.
     """
     try:
         from win2xcur.parser import open_blob
@@ -76,7 +78,7 @@ def load_cursor_frames(
     first_frame = cursor.frames[0]
     if not first_frame.images:
         return None
-    # 使用文件中可用的最大尺寸，避免用小图放大导致模糊
+    # Use maximum available size in file, avoid blurring from scaling up small images
     available = {img.nominal for img in first_frame.images}
     size = max(available)
     result = []
@@ -85,7 +87,7 @@ def load_cursor_frames(
         pb = _cursor_image_to_pixbuf(img)
         if pb is None:
             continue
-        # 使用文件中的真实帧间隔，仅避免 0 导致定时异常
+        # Use file's actual frame interval, only avoid exception from 0
         delay = float(frame.delay) if frame.delay > 0 else 0.01
         result.append((_pixbuf_for_display(pb), delay))
     return result if result else None
@@ -93,8 +95,8 @@ def load_cursor_frames(
 
 def list_cursor_files_hierarchical(cursors_dir: str) -> list[tuple[str, list[str]]]:
     """
-    列出目录下的 Xcursor：真实文件为一级，指向它的符号链接为二级。
-    返回 [(real_name, [symlink_name, ...]), ...]，按 real_name 排序。
+    List Xcursor files in directory: real files are level 1, symbolic links pointing to them are level 2.
+    Returns [(real_name, [symlink_name, ...]), ...], sorted by real_name.
     """
     if not os.path.isdir(cursors_dir):
         return []
@@ -119,7 +121,7 @@ def list_cursor_files_hierarchical(cursors_dir: str) -> list[tuple[str, list[str
             continue
         if real_name not in real_to_names:
             real_to_names[real_name] = []
-        # 真实文件本身放第一个，符号链接名随后
+        # Real file itself goes first, symbolic link names follow
         if name == real_name:
             real_to_names[real_name].insert(0, name)
         else:
@@ -134,7 +136,7 @@ def list_cursor_files_hierarchical(cursors_dir: str) -> list[tuple[str, list[str
 
 
 class CursorPreviewDialog(Adw.Dialog):
-    """光标预览对话框：左侧列表光标名，右侧为动态图预览（多帧连续播放）。"""
+    """Cursor preview dialog: left list shows cursor names, right shows animated preview (multi-frame continuous playback)."""
 
     def __init__(self, cursors_dir: str, **kwargs):
         super().__init__(**kwargs)
@@ -142,7 +144,7 @@ class CursorPreviewDialog(Adw.Dialog):
         self._timeout_id = None
         self._frames: list[tuple[GdkPixbuf.Pixbuf, float]] = []
         self._frame_index = 0
-        self.set_title("预览光标")
+        self.set_title(_("Preview Cursors"))
         self.set_content_width(520)
         self.set_content_height(420)
 
@@ -156,7 +158,7 @@ class CursorPreviewDialog(Adw.Dialog):
         main.set_margin_end(12)
         main.set_vexpand(True)
 
-        # 左侧：真实文件用 ExpanderRow（默认折叠），符号链接为子行
+        # Left: real files use ExpanderRow (collapsed by default), symbolic links are sub-rows
         list_box = Gtk.ListBox()
         list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
         list_box.set_size_request(160, -1)
@@ -170,17 +172,17 @@ class CursorPreviewDialog(Adw.Dialog):
         scroll_list.set_vexpand(True)
         main.append(scroll_list)
 
-        # 右侧：预览区，强制图片占 DISPLAY_PIXEL_SIZE 显示
+        # Right: preview area, force image to occupy DISPLAY_PIXEL_SIZE display
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         right.set_hexpand(True)
         right.set_size_request(DISPLAY_PIXEL_SIZE + 32, DISPLAY_PIXEL_SIZE + 32)
         self._preview_image = Gtk.Image()
-        self._preview_image.set_pixel_size(DISPLAY_PIXEL_SIZE)  # 强制预览区尺寸，避免被压小
+        self._preview_image.set_pixel_size(DISPLAY_PIXEL_SIZE)  # Force preview area size, avoid being compressed
         self._preview_image.set_vexpand(True)
         self._preview_image.set_halign(Gtk.Align.CENTER)
         self._preview_image.set_valign(Gtk.Align.CENTER)
         right.append(self._preview_image)
-        self._preview_label = Gtk.Label(label="选择左侧光标以预览")
+        self._preview_label = Gtk.Label(label=_("Select cursor on the left to preview"))
         self._preview_label.add_css_class("dim-label")
         right.append(self._preview_label)
         main.append(right)
@@ -195,12 +197,12 @@ class CursorPreviewDialog(Adw.Dialog):
         for real_name, symlinks in items:
             expander = Adw.ExpanderRow()
             expander.set_title(real_name)
-            expander.set_expanded(False)  # 默认折叠
+            expander.set_expanded(False)  # Collapsed by default
             expander.cursor_path = os.path.join(self.cursors_dir, real_name)
             self._list_box.append(expander)
             if first_expander is None:
                 first_expander = expander
-            # 二级：符号链接（用点击手势，因在 ExpanderRow 内 activated 可能不触发）
+            # Level 2: symbolic links (use click gesture, because activated may not trigger inside ExpanderRow)
             for sym_name in symlinks:
                 sub = Adw.ActionRow()
                 sub.set_title(sym_name)
@@ -215,7 +217,7 @@ class CursorPreviewDialog(Adw.Dialog):
             self._show_preview_for_path(first_expander.cursor_path, first_expander.get_title())
 
     def _on_list_row_selected(self, list_box: Gtk.ListBox, row: Gtk.ListBoxRow | None):
-        """一级（ExpanderRow）被选中时预览对应真实文件。"""
+        """Level 1 (ExpanderRow) selected, preview corresponding real file."""
         if row is None:
             return
         path = getattr(row, "cursor_path", None)
@@ -225,7 +227,7 @@ class CursorPreviewDialog(Adw.Dialog):
         self._show_preview_for_path(path, name)
 
     def _on_child_row_clicked(self, gesture, n_press, x, y, row):
-        """二级（符号链接）被点击时预览。"""
+        """Level 2 (symbolic link) clicked, preview."""
         path = getattr(row, "cursor_path", None)
         if not path:
             return
@@ -248,13 +250,13 @@ class CursorPreviewDialog(Adw.Dialog):
         threading.Thread(target=do_load, daemon=True).start()
 
     def _apply_loaded_frames(self, path: str, name: str, frames: list):
-        """主线程：应用后台加载的帧（若已切换则忽略）。"""
+        """Main thread: apply background loaded frames (ignore if switched)."""
         if getattr(self, "_load_path", None) != path:
             return
         self._frames = frames
         if not self._frames:
             self._preview_image.clear()
-            self._preview_label.set_label(f"{name}\n（无法解析或非 Xcursor）")
+            self._preview_label.set_label(_("{}\n(Cannot parse or not Xcursor)").format(name))
             return
         self._frame_index = 0
         self._preview_image.set_from_pixbuf(self._frames[0][0])
@@ -267,7 +269,7 @@ class CursorPreviewDialog(Adw.Dialog):
         if len(self._frames) <= 1:
             return
         delay_sec = self._frames[self._frame_index][1]
-        ms = max(1, int(delay_sec * 1000))  # 以指针内置间隔为准，仅避免 0
+        ms = max(1, int(delay_sec * 1000))  # Use pointer built-in interval, only avoid 0
 
         def tick():
             self._frame_index = (self._frame_index + 1) % len(self._frames)

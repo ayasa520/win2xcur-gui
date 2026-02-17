@@ -31,6 +31,8 @@ sys.path.insert(1, pkgdatadir)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 locale.bindtextdomain('win2xcur-gui', localedir)
 locale.textdomain('win2xcur-gui')
+gettext.bindtextdomain('win2xcur-gui', localedir)
+gettext.textdomain('win2xcur-gui')
 gettext.install('win2xcur-gui', localedir)
 
 if __name__ == '__main__':

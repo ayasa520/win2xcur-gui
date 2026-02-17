@@ -1,28 +1,28 @@
-"""常量定义模块"""
+"""Constant definition module"""
 
-# Windows 注册表键名到 xcursor 名称的固定映射
-# Scheme.Reg 的 HKCU 行中的顺序是固定的，按位置对应这些 Windows 光标类型
+# Fixed mapping from Windows registry key names to xcursor names
+# Order in HKCU line of Scheme.Reg is fixed, corresponding to these Windows cursor types by position
 WIN_CURSOR_ORDER = [
-    "arrow",  # 0: 正常选择
-    "help",  # 1: 帮助选择
-    "appstarting",  # 2: 后台运行
-    "wait",  # 3: 忙
-    "crosshair",  # 4: 精确选择
-    "ibeam",  # 5: 文本选择
-    "pen",  # 6: 手写
-    "no",  # 7: 不可用
-    "ns",  # 8: 垂直调整大小
-    "we",  # 9: 水平调整大小
-    "nwse",  # 10: 对角线调整大小1
-    "nese",  # 11: 对角线调整大小2
-    "move",  # 12: 移动
-    "uparrow",  # 13: 候选
-    "hand",  # 14: 链接选择
-    # "pin",  # 15: 固定
-    # "person",  # 16: 人物
+    "arrow",  # 0: Normal Select
+    "help",  # 1: Help Select
+    "appstarting",  # 2: Working in Background
+    "wait",  # 3: Busy
+    "crosshair",  # 4: Precision Select
+    "ibeam",  # 5: Text Select
+    "pen",  # 6: Handwriting
+    "no",  # 7: Unavailable
+    "ns",  # 8: Vertical Resize
+    "we",  # 9: Horizontal Resize
+    "nwse",  # 10: Diagonal Resize 1
+    "nese",  # 11: Diagonal Resize 2
+    "move",  # 12: Move
+    "uparrow",  # 13: Alternate Select
+    "hand",  # 14: Link Select
+    # "pin",  # 15: Pin
+    # "person",  # 16: Person
 ]
 
-# Windows 光标类型到 xcursor 名称的映射
+# Windows cursor type to xcursor name mapping
 WIN_TO_XCURSOR = {
     "arrow": "default",
     "help": "help",

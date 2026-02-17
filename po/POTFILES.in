@@ -6,3 +6,7 @@ data/io.github.ayasa520.Win2xcur.gschema.xml
 src/main.py
 src/window.py
 src/window.ui
+src/inf_parser.py
+src/converter.py
+src/cursor_preview.py
+src/models.py
