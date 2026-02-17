@@ -38,6 +38,13 @@
   </branding>
 
   <releases>
+    <release version="0.1.3" date="2026-02-18">
+      <description translate="no">
+        <ul>
+          <li>feat: add AI super-resolution support using RealESRGAN</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.2" date="2026-02-17">
       <description translate="no">
         <ul>
