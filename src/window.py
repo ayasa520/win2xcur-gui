@@ -415,12 +415,58 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                 self.log(_("Error: {}").format(e.message))
 
     def detect_zip_encoding(self, zip_path):
-        """Detect ZIP file encoding"""
-        with zipfile.ZipFile(zip_path, "r") as z:
-            for info in z.infolist():
-                if info.flag_bits & 0x800:
-                    return "utf-8"
-            return "gbk"
+        """Detect ZIP file encoding by reading raw bytes from local file headers"""
+        encoding_candidates = ["utf-8", "gbk", "big5", "shift_jis"]
+        
+        with open(zip_path, 'rb') as f:
+            # Scan for local file headers (0x04034b50)
+            while True:
+                chunk = f.read(4)
+                if len(chunk) < 4:
+                    break
+                
+                if chunk == b'\x50\x4b\x03\x04':  # Local file header signature
+                    # Read local file header
+                    f.read(2)  # version needed
+                    flag_bits = int.from_bytes(f.read(2), 'little')
+                    
+                    # Check UTF-8 flag (bit 11)
+                    if flag_bits & 0x800:
+                        return "utf-8"
+                    
+                    f.read(16)  # Skip: compression, mod time, mod date, crc32, compressed size, uncompressed size
+                    filename_len = int.from_bytes(f.read(2), 'little')
+                    extra_len = int.from_bytes(f.read(2), 'little')
+                    
+                    # Read raw filename bytes
+                    filename_bytes = f.read(filename_len)
+                    f.read(extra_len)  # Skip extra field
+                    
+                    # Skip pure ASCII filenames (can't determine encoding from them)
+                    try:
+                        filename_bytes.decode('ascii')
+                        continue
+                    except UnicodeDecodeError:
+                        pass
+                    
+                    # Try different encodings on raw bytes
+                    for encoding in encoding_candidates:
+                        try:
+                            filename_bytes.decode(encoding)
+                            return encoding
+                        except (UnicodeDecodeError, LookupError):
+                            continue
+                    
+                    # If we found a non-ASCII filename but can't decode it, return gbk as fallback
+                    return "gbk"
+                elif chunk == b'\x50\x4b\x01\x02':  # Central directory header
+                    # Reached central directory, stop scanning
+                    break
+                else:
+                    # Not a header, move back 3 bytes and continue
+                    f.seek(-3, 1)
+        
+        return "utf-8"
 
     def parse_zip(self):
         """Parse ZIP file"""
@@ -443,23 +489,47 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
             # Extract ZIP
             self.log(_("Extracting files..."))
             with zipfile.ZipFile(self.zip_path, "r") as zip_ref:
-                if encoding == "gbk":
-                    # Extract with GBK encoding
+                if encoding != "utf-8":
+                    # Need to decode filenames using detected encoding
+                    # Build filename mapping by reading raw bytes from local file headers
+                    filename_map = {}
+                    with open(self.zip_path, 'rb') as f:
+                        for member in zip_ref.namelist():
+                            # Find this file's local header
+                            info = zip_ref.getinfo(member)
+                            f.seek(info.header_offset)
+                            
+                            # Verify local file header signature
+                            if f.read(4) != b'\x50\x4b\x03\x04':
+                                filename_map[member] = member
+                                continue
+                            
+                            f.read(22)  # Skip to filename length
+                            filename_len = int.from_bytes(f.read(2), 'little')
+                            f.read(2)  # Skip extra field length
+                            
+                            # Read raw filename bytes
+                            filename_bytes = f.read(filename_len)
+                            
+                            try:
+                                correct_name = filename_bytes.decode(encoding)
+                                filename_map[member] = correct_name
+                            except Exception:
+                                filename_map[member] = member
+                    
+                    # Extract with corrected filenames
                     for member in zip_ref.namelist():
-                        try:
-                            member_name = member.encode('cp437').decode('gbk')
-                        except Exception:
-                            member_name = member
-
-                        # Extract file
+                        member_name = filename_map.get(member, member)
+                        
                         source = zip_ref.open(member)
                         target_path = os.path.join(self.temp_dir, member_name)
-
-                        # If it's a directory
+                        
                         if member_name.endswith('/'):
                             os.makedirs(target_path, exist_ok=True)
                         else:
-                            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                            parent_dir = os.path.dirname(target_path)
+                            if parent_dir:
+                                os.makedirs(parent_dir, exist_ok=True)
                             with open(target_path, 'wb') as target:
                                 shutil.copyfileobj(source, target)
                 else:
