@@ -82,7 +82,7 @@ SYMLINK_MAP = {
         "sb_h_double_arrow",
         "split_h",
         "w-resize",
-        "we-resize",
+        "ew-resize",
     ],
     "size_bdiag": [
         "bottom_left_corner",

@@ -167,6 +167,15 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         shadow_row.set_activatable_widget(self.shadow_switch)
         options_group.add(shadow_row)
 
+        superres_row = Adw.ActionRow()
+        superres_row.set_title(_("Enable Super-Resolution"))
+        superres_row.set_subtitle(_("Use Real-ESRGAN x4 to upscale largest size for better quality"))
+        self.superres_switch = Gtk.Switch()
+        self.superres_switch.set_valign(Gtk.Align.CENTER)
+        superres_row.add_suffix(self.superres_switch)
+        superres_row.set_activatable_widget(self.superres_switch)
+        options_group.add(superres_row)
+
         symlink_row = Adw.ActionRow()
         symlink_row.set_title(_("Create Symbolic Links"))
         symlink_row.set_subtitle(_("Create symbolic links for common cursor names"))
@@ -690,6 +699,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
             total = len(self.inf_parser.cursor_files)
             converted = 0
             add_shadow = self.shadow_switch.get_active()
+            use_superres = self.superres_switch.get_active()
 
             for win_type, filename in self.inf_parser.cursor_files.items():
                 xcursor_name = WIN_TO_XCURSOR.get(win_type)
@@ -714,6 +724,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                     xcursor_name=xcursor_name,
                     target_sizes=target_sizes,
                     add_shadow=add_shadow,
+                    use_superres=use_superres,
                     inf_dir=self.inf_dir,
                 )
 

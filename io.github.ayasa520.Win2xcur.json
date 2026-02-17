@@ -46,7 +46,9 @@
             "name": "python3-meson-python",
             "buildsystem": "simple",
             "build-commands": [
-                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"meson-python\" --no-build-isolation"
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"meson-python\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/meson_python-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-meson-python/LICENSE || true",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/pyproject_metadata-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-pyproject_metadata/LICENSE || true"
             ],
             "sources": [
                 {
@@ -65,7 +67,10 @@
             "name": "python3-win2xcur",
             "buildsystem": "simple",
             "build-commands": [
-                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"win2xcur\" --no-build-isolation"
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"win2xcur\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/Wand-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-Wand/LICENSE || true",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/numpy-*.dist-info/LICENSE.txt ${FLATPAK_DEST}/share/licenses/python3-numpy/LICENSE.txt || true",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/win2xcur-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-win2xcur/LICENSE || true"
             ],
             "sources": [
                 {
@@ -82,6 +87,127 @@
                     "type": "file",
                     "url": "https://files.pythonhosted.org/packages/c2/ad/d3358eb6f23ff479a21d1c92d6afcc147b031ec13974eec43e2f218337ec/win2xcur-0.2.0-py3-none-any.whl",
                     "sha256": "8aff7c1c1435caec7fd87b2204012ba81eeeea5b0637a8cb6298517a3d7f23b5"
+                }
+            ]
+        },
+        {
+            "name": "python3-pybind11",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"pybind11\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/pybind11-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-pybind11/LICENSE || true"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/88/c5/e98d9c51f3d5300d5e40ad9037dd6b3b60736fd02ab68dcc98c96be7592d/pybind11-3.0.2-py3-none-any.whl",
+                    "sha256": "f8a6500548919cc33bcd220d5f984688326f574fa97f1107f2f4fdb4c6fb019f"
+                }
+            ]
+        },
+        {
+            "name": "python3-pillow",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"pillow\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/pillow-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-pillow/LICENSE || true"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/1f/42/5c74462b4fd957fcd7b13b04fb3205ff8349236ea74c7c375766d6c82288/pillow-12.1.1.tar.gz",
+                    "sha256": "9ad8fa5937ab05218e2b6a4cff30295ad35afd2f83ac592e68c0d871bb0fdbc4"
+                }
+            ]
+        },
+        {
+            "name": "python3-protobuf",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"protobuf\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/protobuf-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-protobuf/LICENSE || true"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/ba/25/7c72c307aafc96fa87062aa6291d9f7c94836e43214d43722e86037aac02/protobuf-6.33.5.tar.gz",
+                    "sha256": "6ddcac2a081f8b7b9642c09406bc6a4290128fce5f471cddd165960bb9119e5c"
+                }
+            ]
+        },
+        {
+            "name": "python3-mpmath",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"mpmath\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/mpmath-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-mpmath/LICENSE || true"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl",
+                    "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"
+                }
+            ]
+        },
+        {
+            "name": "python3-sympy",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"sympy\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/sympy-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-sympy/LICENSE || true"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl",
+                    "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"
+                },
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl",
+                    "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"
+                }
+            ]
+        },
+        {
+            "name": "python3-flatbuffers",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"flatbuffers\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/flatbuffers-*.dist-info/LICENSE* ${FLATPAK_DEST}/share/licenses/python3-flatbuffers/ || true"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/e8/2d/d2a548598be01649e2d46231d151a6c56d10b964d94043a335ae56ea2d92/flatbuffers-25.12.19-py2.py3-none-any.whl",
+                    "sha256": "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4"
+                }
+            ]
+        },
+        {
+            "name": "python3-onnxruntime",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"onnxruntime\" --no-build-isolation",
+                "install -Dm644 ${FLATPAK_DEST}/lib/python*/site-packages/onnxruntime-*.dist-info/LICENSE ${FLATPAK_DEST}/share/licenses/python3-onnxruntime/LICENSE || true"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/f6/b5/40606c7bce0702975a077bc6668cd072cd77695fc5c0b3fcf59bdb1fe65e/onnxruntime-1.24.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+                    "sha256": "6361dda4270f3939a625670bd67ae0982a49b7f923207450e28433abc9c3a83b",
+                    "only-arches": [
+                        "x86_64"
+                    ]
+                },
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/79/5b/532a0d75b93bbd0da0e108b986097ebe164b84fbecfdf2ddbf7c8a3a2e83/onnxruntime-1.24.1-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl",
+                    "sha256": "1099f3629832580fedf415cfce2462a56cc9ca2b560d6300c24558e2ac049134",
+                    "only-arches": [
+                        "aarch64"
+                    ]
                 }
             ]
         },
