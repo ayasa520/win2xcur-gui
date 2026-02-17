@@ -38,6 +38,13 @@
   </branding>
 
   <releases>
+    <release version="0.1.1" date="2026-02-17">
+      <description translate="no">
+        <ul>
+          <li>Set up gettext infrastructure and add Chinese (Simplified) translations</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-02-16">
       <description translate="no">
         <p>Initial release</p>
