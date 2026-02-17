@@ -38,6 +38,13 @@
   </branding>
 
   <releases>
+    <release version="0.1.2" date="2026-02-17">
+      <description translate="no">
+        <ul>
+          <li>fix: improve ZIP encoding detection by reading raw file headers</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.1" date="2026-02-17">
       <description translate="no">
         <ul>
