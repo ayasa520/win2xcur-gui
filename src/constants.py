@@ -2,25 +2,25 @@
 
 # Fixed mapping from Windows registry key names to xcursor names
 # Order in HKCU line of Scheme.Reg is fixed, corresponding to these Windows cursor types by position
-WIN_CURSOR_ORDER = [
-    "arrow",  # 0: Normal Select
-    "help",  # 1: Help Select
-    "appstarting",  # 2: Working in Background
-    "wait",  # 3: Busy
-    "crosshair",  # 4: Precision Select
-    "ibeam",  # 5: Text Select
-    "pen",  # 6: Handwriting
-    "no",  # 7: Unavailable
-    "ns",  # 8: Vertical Resize
-    "we",  # 9: Horizontal Resize
-    "nwse",  # 10: Diagonal Resize 1
-    "nese",  # 11: Diagonal Resize 2
-    "move",  # 12: Move
-    "uparrow",  # 13: Alternate Select
-    "hand",  # 14: Link Select
-    # "pin",  # 15: Pin
-    # "person",  # 16: Person
-]
+# WIN_CURSOR_ORDER = [
+#     "arrow",  # 0: Normal Select
+#     "help",  # 1: Help Select
+#     "appstarting",  # 2: Working in Background
+#     "wait",  # 3: Busy
+#     "crosshair",  # 4: Precision Select
+#     "ibeam",  # 5: Text Select
+#     "pen",  # 6: Handwriting
+#     "no",  # 7: Unavailable
+#     "ns",  # 8: Vertical Resize
+#     "we",  # 9: Horizontal Resize
+#     "nwse",  # 10: Diagonal Resize 1
+#     "nese",  # 11: Diagonal Resize 2
+#     "move",  # 12: Move
+#     "uparrow",  # 13: Alternate Select
+#     "hand",  # 14: Link Select
+#     # "pin",  # 15: Pin
+#     # "person",  # 16: Person
+# ]
 
 # Windows cursor type to xcursor name mapping
 WIN_TO_XCURSOR = {
@@ -30,13 +30,13 @@ WIN_TO_XCURSOR = {
     "wait": "wait",
     "crosshair": "crosshair",
     "ibeam": "xterm",
-    "pen": "pencil",
+    "nwpen": "pencil",
     "no": "circle",
-    "ns": "size_ver",
-    "we": "size_hor",
-    "nwse": "size_fdiag",
-    "nese": "size_bdiag",
-    "move": "fleur",
+    "sizens": "size_ver",
+    "sizewe": "size_hor",
+    "sizenwse": "size_fdiag",
+    "sizenese": "size_bdiag",
+    "sizeall": "fleur",
     "uparrow": "uparrow",
     "hand": "hand",
     # pin 和 person  没有对应的

@@ -32,7 +32,6 @@ win2xcur_gui_sources = [
   'window.py',
   'constants.py',
   'models.py',
-  'inf_parser.py',
   'converter.py',
   'cursor_preview.py',
 ]

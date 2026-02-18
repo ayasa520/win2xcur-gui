@@ -212,6 +212,20 @@
             ]
         },
         {
+            "name": "python3-wininfparser",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"wininfparser\" --no-build-isolation"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/1f/5f/a0cc10420acdb7db91748d3eac5f28a36a3aacde1ecfd72f3db044958cc3/wininfparser-1.0.12.1.tar.gz",
+                    "sha256": "69c0a8575eb5e6368f9f1074e65cde0c39e4c056d5ab15a1c1212121920654ce"
+                }
+            ]
+        },
+        {
             "name": "win2xcur-gui",
             "builddir": true,
             "buildsystem": "meson",

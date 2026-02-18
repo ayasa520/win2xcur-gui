@@ -6,16 +6,114 @@ import re
 import threading
 import queue
 import gettext
+import csv
+import io
 
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
+from wininfparser import WinINF, INFsection
 
 from .constants import WIN_TO_XCURSOR
 from .models import ThemeNameModel
-from .inf_parser import INFParser
 from .converter import CursorConverter
 from .cursor_preview import CursorPreviewDialog
 
 _ = gettext.gettext
+
+
+class ThemeInfoExtractor:
+    """Extract theme information from Windows INF file using wininfparser library"""
+    
+    def __init__(self, inf_path):
+        self.inf_path = inf_path
+        self.theme_name = ""
+        self.cursor_files = {}
+        
+    def parse(self):
+        """Parse INF file and extract theme name and cursor mappings"""
+            # 先全部转小写
+        for encoding in ["utf-8", "gbk", "gb2312", "utf-16", "latin1"]:
+            try:
+                with open(self.inf_path, "r", encoding=encoding) as f:
+                    content = f.read()
+                break
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        with open(self.inf_path, "w", encoding="utf-8") as f:
+            f.write(content.lower())
+        inf_file = WinINF()
+        inf_file.ParseFile(self.inf_path)
+        # Get sections
+        default_install = inf_file.GetSection("defaultinstall")
+            
+        strings = {item[0]: item[1].strip('"') for item in inf_file.GetSection("strings")}
+        
+        # Get addreg sections
+        addreg_value = default_install["addreg"]
+        if not addreg_value:
+            return False
+            
+        section_names = addreg_value.split(",")
+        
+        # Initialize mapping
+        mapping = {k: set() for k in WIN_TO_XCURSOR.keys()}
+        
+        # Parse each section
+        for section_name in section_names:
+            section_name = section_name.strip()
+            section = inf_file.GetSection(section_name)
+            if not section:
+                continue
+                
+            if section.GetType() == INFsection.single_line and section.GetSize() > 0:
+                for i in range(section.GetSize()):
+                    if section[i] == "":
+                        continue
+                    reader = csv.reader(io.StringIO(section[i]))
+                    fields = next(reader)
+                    if len(fields) >= 5:
+                        # Check for cursor mappings
+                        if fields[1] == r"control panel\cursors":
+                            if fields[2] in mapping:
+                                cursor_name = self._extract_var_name(fields[4].split("\\")[-1])
+                                if cursor_name.endswith(".cur") or cursor_name.endswith(".ani"):
+                                    mapping[fields[2]].add(cursor_name)
+                                elif cursor_name in strings:
+                                    mapping[fields[2]].add(strings[cursor_name])
+                        # Check for theme name and scheme
+                        elif fields[1] == r"control panel\cursors\schemes":
+                            if fields[2]:
+                                var_name = self._extract_var_name(fields[2])
+                                self.theme_name = strings.get(var_name, var_name)
+                            else:
+                                self.theme_name = _("Untitled Theme")
+                                
+                            # Parse cursor list from scheme
+                            cursor_name_list = [
+                                self._extract_var_name(i.split("\\")[-1])
+                                for i in fields[4].strip().split(",")
+                            ]
+                            for win_type, cursor_name in zip(WIN_TO_XCURSOR.keys(), cursor_name_list):
+                                if win_type in mapping:
+                                    if cursor_name.endswith(".cur") or cursor_name.endswith(".ani"):
+                                        mapping[win_type].add(cursor_name)
+                                    elif cursor_name in strings:
+                                        mapping[win_type].add(strings[cursor_name])
+        
+        # Convert sets to single values (take first item)
+        self.cursor_files = {}
+        for k, v in mapping.items():
+            if v:
+                self.cursor_files[k] = list(v)[0]
+        
+        # Set default theme name if not found
+        if not self.theme_name:
+            self.theme_name = _("Untitled Theme")
+                
+    
+    def _extract_var_name(self, s):
+        """Extract variable name from %var_name% format"""
+        m = re.search(r"%([^%]+)%", s)
+        return m.group(1) if m else s
 
 
 class Win2xcurGuiWindow(Adw.ApplicationWindow):
@@ -562,28 +660,26 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
             self.log(_("Found INF file: {}").format(os.path.basename(inf_path)))
 
             # Parse INF
-            self.inf_parser = INFParser(inf_path)
-            if self.inf_parser.parse():
-                self.cursor_count_row.set_subtitle(
-                    str(len(self.inf_parser.cursor_files))
-                )
-                self.log(_("Theme name: {}").format(self.inf_parser.theme_name))
-                self.log(_("Found {} cursors").format(len(self.inf_parser.cursor_files)))
-                # Theme name: GObject property, bound to Entry, just set initial value here
-                self.theme_name_model.set_property("theme-name", self.inf_parser.theme_name)
+            self.inf_parser = ThemeInfoExtractor(inf_path)
+            self.inf_parser.parse()
+            self.cursor_count_row.set_subtitle(
+                str(len(self.inf_parser.cursor_files))
+            )
+            self.log(_("Theme name: {}").format(self.inf_parser.theme_name))
+            self.log(_("Found {} cursors").format(len(self.inf_parser.cursor_files)))
+            # Theme name: GObject property, bound to Entry, just set initial value here
+            self.theme_name_model.set_property("theme-name", self.inf_parser.theme_name)
 
-                # Show default path when output directory is not manually selected
-                if not self.output_dir:
-                    self.output_label.set_text(f"/tmp/{self.get_theme_name_for_path()}")
+            # Show default path when output directory is not manually selected
+            if not self.output_dir:
+                self.output_label.set_text(f"/tmp/{self.get_theme_name_for_path()}")
 
-                # Show cursor mapping
-                for win_type, filename in self.inf_parser.cursor_files.items():
-                    xcursor_name = WIN_TO_XCURSOR.get(win_type, win_type)
-                    self.log(f"  {win_type} -> {xcursor_name}: {filename}")
+            # Show cursor mapping
+            for win_type, filename in self.inf_parser.cursor_files.items():
+                xcursor_name = WIN_TO_XCURSOR.get(win_type, win_type)
+                self.log(f"  {win_type} -> {xcursor_name}: {filename}")
 
-                self.convert_btn.set_sensitive(True)
-            else:
-                self.log(_("Error: Cannot parse INF file"))
+            self.convert_btn.set_sensitive(True)
 
         except Exception as e:
             self.log(_("Parse error: {}").format(e))
