@@ -38,6 +38,13 @@
   </branding>
 
   <releases>
+    <release version="0.1.6" date="2026-02-19">
+      <description translate="no">
+        <ul>
+          <li>Use ZipUnicode for ZIP extraction and drop custom encoding detection</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.5" date="2026-02-19">
       <description translate="no">
         <ul>
