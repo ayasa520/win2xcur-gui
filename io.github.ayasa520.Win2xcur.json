@@ -233,7 +233,7 @@
                 {
                     "type": "git",
                     "url": "https://github.com/ayasa520/win2xcur-gui.git",
-                    "tag": "v0.1.4"
+                    "tag": "v0.1.5"
                 }
             ]
         }

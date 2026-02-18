@@ -38,6 +38,12 @@
   </branding>
 
   <releases>
+    <release version="0.1.5" date="2026-02-19">
+      <description translate="no">
+        <ul>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.4" date="2026-02-18">
       <description translate="no">
         <ul>
