@@ -1,5 +1,5 @@
 import os
-import zipfile
+from pathlib import Path
 import tempfile
 import shutil
 import re
@@ -11,6 +11,7 @@ import io
 
 from gi.repository import Gtk, Adw, GLib, Gio, Gdk, GObject
 from wininfparser import WinINF, INFsection
+from zip_unicode import ZipHandler
 
 from .constants import WIN_TO_XCURSOR
 from .models import ThemeNameModel
@@ -589,59 +590,10 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                 self.log(_("Error: No file selected"))
                 return
 
-            # Detect ZIP encoding
-            encoding = self.detect_zip_encoding(self.zip_path)
-            self.log(_("Detected ZIP encoding: {}").format(encoding.upper()))
 
-            # Extract ZIP
-            self.log(_("Extracting files..."))
-            with zipfile.ZipFile(self.zip_path, "r") as zip_ref:
-                if encoding != "utf-8":
-                    # Need to decode filenames using detected encoding
-                    # Build filename mapping by reading raw bytes from local file headers
-                    filename_map = {}
-                    with open(self.zip_path, 'rb') as f:
-                        for member in zip_ref.namelist():
-                            # Find this file's local header
-                            info = zip_ref.getinfo(member)
-                            f.seek(info.header_offset)
-                            
-                            # Verify local file header signature
-                            if f.read(4) != b'\x50\x4b\x03\x04':
-                                filename_map[member] = member
-                                continue
-                            
-                            f.read(22)  # Skip to filename length
-                            filename_len = int.from_bytes(f.read(2), 'little')
-                            f.read(2)  # Skip extra field length
-                            
-                            # Read raw filename bytes
-                            filename_bytes = f.read(filename_len)
-                            
-                            try:
-                                correct_name = filename_bytes.decode(encoding)
-                                filename_map[member] = correct_name
-                            except Exception:
-                                filename_map[member] = member
-                    
-                    # Extract with corrected filenames
-                    for member in zip_ref.namelist():
-                        member_name = filename_map.get(member, member)
-                        
-                        source = zip_ref.open(member)
-                        target_path = os.path.join(self.temp_dir, member_name)
-                        
-                        if member_name.endswith('/'):
-                            os.makedirs(target_path, exist_ok=True)
-                        else:
-                            parent_dir = os.path.dirname(target_path)
-                            if parent_dir:
-                                os.makedirs(parent_dir, exist_ok=True)
-                            with open(target_path, 'wb') as target:
-                                shutil.copyfileobj(source, target)
-                else:
-                    # UTF-8 encoding, extract directly
-                    zip_ref.extractall(self.temp_dir)
+            zip_handler = ZipHandler(self.zip_path)
+            zip_handler.extract_all(Path(self.temp_dir))
+
 
             # Search for INF file
             inf_files = []

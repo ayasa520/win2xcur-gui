@@ -226,6 +226,25 @@
             ]
         },
         {
+            "name": "python3-ZipUnicode",
+            "buildsystem": "simple",
+            "build-commands": [
+                "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} \"ZipUnicode\" --no-build-isolation"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/38/6f/f5fbc992a329ee4e0f288c1fe0e2ad9485ed064cac731ed2fe47dcc38cbf/chardet-5.2.0-py3-none-any.whl",
+                    "sha256": "e1cf59446890a00105fe7b7912492ea04b6e6f06d4b742b2c788469e34c82970"
+                },
+                {
+                    "type": "file",
+                    "url": "https://files.pythonhosted.org/packages/54/0d/7d90affd13a300aa003a5beb09577f6817cf9609278c5253da64a014623f/zipunicode-1.2.0-py3-none-any.whl",
+                    "sha256": "d6cc50d51882440d4cc4c4460c2ede4283cc9424d4748ab73419bd428a5a92e9"
+                }
+            ]
+        },
+        {
             "name": "win2xcur-gui",
             "builddir": true,
             "buildsystem": "meson",
