@@ -31,7 +31,7 @@ WIN_TO_XCURSOR = {
     "crosshair": "crosshair",
     "ibeam": "xterm",
     "nwpen": "pencil",
-    "no": "circle",
+    "no": "not-allowed",
     "sizens": "size_ver",
     "sizewe": "size_hor",
     "sizenwse": "size_fdiag",
@@ -61,7 +61,7 @@ SYMLINK_MAP = {
     "wait": ["watch"],
     "crosshair": ["cross"],
     "xterm": ["ibeam", "text"],
-    "circle": ["03b6e0fcb3499374a867c041f52298f0"],
+    "not-allowed": ["03b6e0fcb3499374a867c041f52298f0", "no"],
     "size_ver": [
         "00008160000006810000408080010102",
         "bottom_side",
@@ -90,6 +90,7 @@ SYMLINK_MAP = {
         "sw-resize",
         "top_right_corner",
         "ur_angle",
+        "nesw-resize",
     ],
     "size_fdiag": [
         "bottom_right_corner",

@@ -310,77 +310,75 @@ class CursorConverter:
                     cursor_fresh = open_blob(cursor_data)
                     frame = cursor_fresh.frames[frame_idx]
 
-                    # Get source size image
+                    # Get source size image - 必须是最大尺寸
                     img = next(
                         (i for i in frame.images if i.nominal == max_original_size),
                         None,
                     )
-                    if img is None and frame.images:
-                        max_in_frame = max(i.nominal for i in frame.images)
-                        img = next(
-                            (i for i in frame.images if i.nominal == max_in_frame),
-                            frame.images[0],
-                        )
-
+                    
+                    # 如果该帧没有最大尺寸的图像，跳过这一帧
                     if img is None:
-                        superres_frames.append(
-                            CursorFrame(images=[], delay=frame.delay)
+                        self.log(
+                            _("  Skipping frame {} (no {}x{} size)").format(
+                                frame_idx, max_original_size, max_original_size
+                            )
                         )
-                    else:
-                        # Convert to numpy array and apply super-resolution
-                        img_array = np.array(img.image)
-                        superres_array = self._apply_superres_to_image(img_array)
+                        continue
+                    
+                    # Convert to numpy array and apply super-resolution
+                    img_array = np.array(img.image)
+                    superres_array = self._apply_superres_to_image(img_array)
 
-                        # 根据第一次成功的结果推断真实放大倍率和 superres_size
-                        if scale_factor_global is None:
-                            src_h = img_array.shape[0]
-                            sr_h = superres_array.shape[0]
-                            if src_h > 0:
-                                scale_factor_global = sr_h / src_h
-                                self._superres_scale = scale_factor_global
-                                superres_size = int(
-                                    round(max_original_size * scale_factor_global)
+                    # 根据第一次成功的结果推断真实放大倍率和 superres_size
+                    if scale_factor_global is None:
+                        src_h = img_array.shape[0]
+                        sr_h = superres_array.shape[0]
+                        if src_h > 0:
+                            scale_factor_global = sr_h / src_h
+                            self._superres_scale = scale_factor_global
+                            superres_size = int(
+                                round(max_original_size * scale_factor_global)
+                            )
+                            self.log(
+                                _("  Using super-resolution: {}x{} → {}x{}").format(
+                                    max_original_size,
+                                    max_original_size,
+                                    superres_size,
+                                    superres_size,
                                 )
-                                self.log(
-                                    _("  Using super-resolution: {}x{} → {}x{}").format(
-                                        max_original_size,
-                                        max_original_size,
-                                        superres_size,
-                                        superres_size,
-                                    )
-                                )
+                            )
 
-                        # Create new image from super-resolved array
-                        superres_pil = Image.fromarray(superres_array)
+                    # Create new image from super-resolved array
+                    superres_pil = Image.fromarray(superres_array)
 
-                        # Convert PIL Image to wand Image to maintain compatibility
-                        from wand.image import Image as WandImage
-                        import io
+                    # Convert PIL Image to wand Image to maintain compatibility
+                    from wand.image import Image as WandImage
+                    import io
 
-                        img_buffer = io.BytesIO()
-                        superres_pil.save(img_buffer, format="PNG")
-                        img_buffer.seek(0)
-                        superres_wand = WandImage(blob=img_buffer.getvalue())
+                    img_buffer = io.BytesIO()
+                    superres_pil.save(img_buffer, format="PNG")
+                    img_buffer.seek(0)
+                    superres_wand = WandImage(blob=img_buffer.getvalue())
 
-                        # Scale hotspot（使用实际推断出的倍率）
-                        scale_factor = scale_factor_global or self._superres_scale
-                        new_hotspot = (
-                            int(img.hotspot[0] * scale_factor),
-                            int(img.hotspot[1] * scale_factor),
-                        )
+                    # Scale hotspot（使用实际推断出的倍率）
+                    scale_factor = scale_factor_global or self._superres_scale
+                    new_hotspot = (
+                        int(img.hotspot[0] * scale_factor),
+                        int(img.hotspot[1] * scale_factor),
+                    )
 
-                        # Create new CursorImage with wand Image
-                        from win2xcur.cursor import CursorImage
+                    # Create new CursorImage with wand Image
+                    from win2xcur.cursor import CursorImage
 
-                        superres_cursor_img = CursorImage(
-                            image=superres_wand,
-                            hotspot=new_hotspot,
-                            nominal=superres_size,
-                        )
+                    superres_cursor_img = CursorImage(
+                        image=superres_wand,
+                        hotspot=new_hotspot,
+                        nominal=superres_size,
+                    )
 
-                        superres_frames.append(
-                            CursorFrame(images=[superres_cursor_img], delay=frame.delay)
-                        )
+                    superres_frames.append(
+                        CursorFrame(images=[superres_cursor_img], delay=frame.delay)
+                    )
 
                 self.log(
                     _(
