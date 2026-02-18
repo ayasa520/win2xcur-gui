@@ -41,6 +41,13 @@
     <release version="0.1.5" date="2026-02-19">
       <description translate="no">
         <ul>
+          <li>fix: skip frames without max size in super-resolution processing</li>
+        </ul>
+      </description>
+    </release>
+    <release version="0.1.5" date="2026-02-19">
+      <description translate="no">
+        <ul>
         </ul>
       </description>
     </release>
