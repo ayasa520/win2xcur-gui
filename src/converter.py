@@ -235,13 +235,14 @@ class CursorConverter:
             add_shadow: whether to add shadow
             use_superres: whether to use super-resolution
             inf_dir: INF file directory (for finding cursor files)
-            svg_output_dir: optional directory for per-size SVG output
+            svg_output_dir: optional directory for scalable SVG output
 
         Returns:
             whether conversion succeeded
         """
         try:
             from win2xcur.parser import open_blob
+            from win2xcur.parser.ani import ANIParser
             from win2xcur.writer import to_x11
             from win2xcur.shadow import apply_to_frames as add_shadow_to_frames
             from win2xcur.scale import apply_to_frames as scale_to_frames
@@ -366,10 +367,7 @@ class CursorConverter:
 
                     # Scale hotspot（使用实际推断出的倍率）
                     scale_factor = scale_factor_global or self._superres_scale
-                    new_hotspot = (
-                        int(img.hotspot[0] * scale_factor),
-                        int(img.hotspot[1] * scale_factor),
-                    )
+                    new_hotspot = self._scale_hotspot(img.hotspot, scale_factor)
 
                     # Create new CursorImage with wand Image
                     from win2xcur.cursor import CursorImage
@@ -414,10 +412,8 @@ class CursorConverter:
                                 new_height = int(wand_img.height * scale_ratio)
                                 wand_img.resize(new_width, new_height)
 
-                                # Scale hotspot
-                                new_hotspot = (
-                                    int(cursor_img.hotspot[0] * scale_ratio),
-                                    int(cursor_img.hotspot[1] * scale_ratio),
+                                new_hotspot = self._scale_hotspot(
+                                    cursor_img.hotspot, scale_ratio
                                 )
 
                                 # Create new CursorImage
@@ -537,10 +533,15 @@ class CursorConverter:
                                     CursorFrame(images=[], delay=frame.delay)
                                 )
                             else:
+                                source_hotspot = img.hotspot
                                 temp_frame = CursorFrame(
                                     images=[img], delay=frame.delay
                                 )
                                 scale_to_frames([temp_frame], scale=scale_ratio)
+                                for scaled in temp_frame.images:
+                                    scaled.hotspot = self._scale_hotspot(
+                                        source_hotspot, scale_ratio
+                                    )
                                 size_frames.append(temp_frame)
 
                         # Fix nominal value (apply_to_frames doesn't update it automatically)
@@ -593,7 +594,11 @@ class CursorConverter:
             # Write only the formats requested by the caller. Both formats use the
             # same merged frames so expensive scaling and super-resolution happen once.
             if output_file:
-                x11_data = to_x11(merged_frames)
+                saved_hotspots = self._integer_hotspots(merged_frames)
+                try:
+                    x11_data = to_x11(merged_frames)
+                finally:
+                    self._restore_hotspots(merged_frames, saved_hotspots)
                 with open(output_file, "wb") as f:
                     f.write(x11_data)
 
@@ -602,7 +607,7 @@ class CursorConverter:
                     svg_output_dir,
                     xcursor_name,
                     merged_frames,
-                    target_sizes,
+                    animated=isinstance(cursor, ANIParser),
                 )
 
             self.log(
@@ -624,61 +629,120 @@ class CursorConverter:
         output_dir: str,
         cursor_name: str,
         frames,
-        target_sizes: list[int],
+        animated: bool,
     ) -> None:
-        """Write a GNOME scalable cursor directory for one cursor.
+        """Write one scalable cursor directory.
 
-        GNOME's scalable cursor loader does not discover arbitrary SVG files in a
-        flat directory.  It expects one directory per cursor, one SVG per frame, and
-        a metadata.json file describing nominal size, hotspot, and frame delay.  The
-        artwork remains embedded as PNG data so pixel-art cursors keep their original
-        appearance while the theme uses the native scalable-cursor animation format.
+        A static .cur cursor is one metadata entry without delay. An animated
+        .ani cursor repeats that entry once per frame and adds delay. Hotspots
+        stay fractional so a scaled 16.5 does not become 16.
         """
         os.makedirs(output_dir, exist_ok=True)
         cursor_dir = os.path.join(output_dir, cursor_name)
         os.makedirs(cursor_dir, exist_ok=True)
-        metadata = []
-        for target_size in target_sizes:
-            frame_images = [
-                next((image for image in frame.images if image.nominal == target_size), None)
-                for frame in frames
-            ]
-            frame_images = [image for image in frame_images if image is not None]
-            if not frame_images:
-                self.log(_("  Skipping SVG {}x{}: no generated image").format(target_size, target_size))
-                continue
+        available_sizes = {
+            image.nominal
+            for frame in frames
+            for image in frame.images
+        }
+        if not available_sizes:
+            self.log(_("  Skipping SVG: no generated image"))
+            return
 
-            durations = [max(1, int(frame.delay or 100)) for frame in frames if next(
-                (image for image in frame.images if image.nominal == target_size), None
-            ) is not None]
-            for index, (image, duration) in enumerate(zip(frame_images, durations)):
-                png_data = image.image.make_blob(format="png")
-                encoded = base64.b64encode(png_data).decode("ascii")
-                filename = f"{cursor_name}-{target_size}-{index + 1}.svg"
-                svg = (
-                    '<?xml version="1.0" encoding="UTF-8"?>\n'
-                    f'<svg xmlns="http://www.w3.org/2000/svg" width="{target_size}" '
-                    f'height="{target_size}" viewBox="0 0 {target_size} {target_size}">\n'
-                    f'  <image width="{target_size}" height="{target_size}" '
-                    f'preserveAspectRatio="none" href="data:image/png;base64,{encoded}"/>\n'
-                    '</svg>\n'
-                )
-                output_path = os.path.join(cursor_dir, filename)
-                with open(output_path, "w", encoding="utf-8") as f:
-                    f.write(svg)
-                hotspot_x, hotspot_y = image.hotspot
-                metadata.append({
-                    "filename": filename,
-                    "delay": duration,
-                    "hotspot_x": int(hotspot_x),
-                    "hotspot_y": int(hotspot_y),
-                    "nominal_size": target_size,
-                })
+        nominal_size = max(available_sizes)
+        frame_images = [
+            next((image for image in frame.images if image.nominal == nominal_size), None)
+            for frame in frames
+        ]
+        durations = [
+            self._frame_delay_ms(frame.delay)
+            for frame, image in zip(frames, frame_images)
+            if image is not None
+        ]
+        frame_images = [image for image in frame_images if image is not None]
+        metadata = []
+        for index, (image, duration) in enumerate(zip(frame_images, durations)):
+            png_data = self._cursor_png_bytes(image.image)
+            encoded = base64.b64encode(png_data).decode("ascii")
+            if animated:
+                filename = f"{cursor_name}-{index + 1}.svg"
+            else:
+                filename = f"{cursor_name}.svg"
+            svg = (
+                '<?xml version="1.0" encoding="UTF-8"?>\n'
+                f'<svg xmlns="http://www.w3.org/2000/svg" width="{nominal_size}" '
+                f'height="{nominal_size}" viewBox="0 0 {nominal_size} {nominal_size}">\n'
+                f'  <image width="{nominal_size}" height="{nominal_size}" '
+                f'preserveAspectRatio="none" href="data:image/png;base64,{encoded}"/>\n'
+                '</svg>\n'
+            )
+            output_path = os.path.join(cursor_dir, filename)
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(svg)
+            hotspot_x, hotspot_y = image.hotspot
+            entry = {
+                "filename": filename,
+                "hotspot_x": self._metadata_number(hotspot_x),
+                "hotspot_y": self._metadata_number(hotspot_y),
+                "nominal_size": nominal_size,
+            }
+            if animated:
+                entry["delay"] = duration
+            metadata.append(entry)
         metadata_path = os.path.join(cursor_dir, "metadata.json")
         with open(metadata_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, ensure_ascii=False, indent=2)
             f.write("\n")
-        self.log(_("  ✓ Generated SVG files for {}").format(cursor_name))
+        self.log(
+            _("  ✓ Generated SVG files for {} at {}x{}").format(
+                cursor_name, nominal_size, nominal_size
+            )
+        )
+
+    def _scale_hotspot(self, hotspot, scale: float) -> tuple[float, float]:
+        return (float(hotspot[0]) * scale, float(hotspot[1]) * scale)
+
+    def _metadata_number(self, value: float) -> int | float:
+        number = round(float(value), 4)
+        if number == int(number):
+            return int(number)
+        return number
+
+    def _integer_hotspots(self, frames) -> list:
+        """Xcursor stores hotspots as integers. Keep the fractional values."""
+        saved = []
+        for frame in frames:
+            spots = []
+            for image in frame.images:
+                spots.append(image.hotspot)
+                image.hotspot = (int(image.hotspot[0]), int(image.hotspot[1]))
+            saved.append(spots)
+        return saved
+
+    def _restore_hotspots(self, frames, saved) -> None:
+        for frame, spots in zip(frames, saved):
+            for image, spot in zip(frame.images, spots):
+                image.hotspot = spot
+
+    def _frame_delay_ms(self, delay_seconds: float) -> int:
+        """Convert a win2xcur frame delay to SVG metadata milliseconds.
+
+        ANI rates are stored in seconds. Truncating that value made an 83 ms
+        frame look like 1 ms.
+        """
+        return max(1, int((delay_seconds or 0) * 1000))
+
+    def _cursor_png_bytes(self, wand_image) -> bytes:
+        """Export one cursor frame as PNG bytes.
+
+        Windows cursors are parsed into wand.sequence.SingleImage objects, and
+        that class leaves make_blob() unimplemented. Cloning into a full
+        wand.image.Image reaches the PNG encoder.
+        """
+        from wand.image import Image as WandImage
+
+        with WandImage(image=wand_image) as png_image:
+            return png_image.make_blob(format="png")
 
     def create_svg_symlinks(self, scalable_dir: str) -> int:
         """Create the same cursor-name aliases inside a scalable theme tree."""

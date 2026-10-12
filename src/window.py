@@ -303,7 +303,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
 
         svg_row = Adw.ActionRow()
         svg_row.set_title(_("SVG"))
-        svg_row.set_subtitle(_("Scalable vector container with embedded cursor artwork"))
+        svg_row.set_subtitle(_("One scalable image, using the largest selected size"))
         self.svg_check = Gtk.CheckButton()
         self.svg_check.set_valign(Gtk.Align.CENTER)
         svg_row.add_suffix(self.svg_check)
@@ -780,14 +780,22 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                 GLib.idle_add(self._on_conversion_error)
                 return
 
+            generate_bitmap = self.bitmap_check.get_active()
+            generate_svg = self.svg_check.get_active()
             self.log(_("Target sizes: {}").format(', '.join(str(s) for s in target_sizes)))
+            if generate_svg and not generate_bitmap and len(target_sizes) > 1:
+                svg_size = max(target_sizes)
+                self.log(
+                    _("SVG output keeps {}x{} only; the desktop scales that image").format(
+                        svg_size, svg_size
+                    )
+                )
+                target_sizes = [svg_size]
 
             total = len(self.inf_parser.cursor_files)
             converted = 0
             add_shadow = self.shadow_switch.get_active()
             use_superres = self.superres_switch.get_active()
-            generate_bitmap = self.bitmap_check.get_active()
-            generate_svg = self.svg_check.get_active()
 
             for win_type, filename in self.inf_parser.cursor_files.items():
                 xcursor_name = WIN_TO_XCURSOR.get(win_type)

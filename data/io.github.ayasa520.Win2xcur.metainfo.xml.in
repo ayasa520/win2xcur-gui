@@ -40,7 +40,7 @@
   <releases>
     <release version="0.1.7" date="2026-10-12">
       <description>
-        <p>Add selectable bitmap Xcursor and animated SVG output formats.</p>
+        <p>Add selectable bitmap Xcursor and SVG output. Static cursors omit delay, and hotspots keep fractional coordinates.</p>
       </description>
     </release>
     <release version="0.1.6" date="2026-02-19">
