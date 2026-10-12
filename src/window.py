@@ -135,6 +135,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.inf_parser = None
         self.inf_dir = None  # INF file directory
         self.output_dir = None  # Output directory
+        self.generated_bitmap = False
 
         # Initialize converter
         self.converter = CursorConverter(log_callback=self.log)
@@ -284,6 +285,30 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         symlink_row.add_suffix(self.symlink_switch)
         symlink_row.set_activatable_widget(self.symlink_switch)
         options_group.add(symlink_row)
+
+        format_row = Adw.ExpanderRow()
+        format_row.set_title(_("Output Formats"))
+        format_row.set_subtitle(_("Choose bitmap Xcursor, SVG, or both"))
+        options_group.add(format_row)
+
+        bitmap_row = Adw.ActionRow()
+        bitmap_row.set_title(_("Bitmap (Xcursor)"))
+        bitmap_row.set_subtitle(_("Native Linux cursor theme files"))
+        self.bitmap_check = Gtk.CheckButton()
+        self.bitmap_check.set_active(True)
+        self.bitmap_check.set_valign(Gtk.Align.CENTER)
+        bitmap_row.add_suffix(self.bitmap_check)
+        bitmap_row.set_activatable_widget(self.bitmap_check)
+        format_row.add_row(bitmap_row)
+
+        svg_row = Adw.ActionRow()
+        svg_row.set_title(_("SVG"))
+        svg_row.set_subtitle(_("Scalable vector container with embedded cursor artwork"))
+        self.svg_check = Gtk.CheckButton()
+        self.svg_check.set_valign(Gtk.Align.CENTER)
+        svg_row.add_suffix(self.svg_check)
+        svg_row.set_activatable_widget(self.svg_check)
+        format_row.add_row(svg_row)
 
         # Multi-size options
         size_row = Adw.ExpanderRow()
@@ -682,10 +707,23 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         if not self.output_dir:
             self.output_dir = os.path.join("/tmp", self.get_theme_name_for_path())
 
-        cursors_dir = os.path.join(self.output_dir, "cursors")
-        os.makedirs(cursors_dir, exist_ok=True)
+        if not self.bitmap_check.get_active() and not self.svg_check.get_active():
+            self.log(_("Error: Select at least one output format"))
+            return
 
-        self.log(_("\nStarting conversion to: {}").format(cursors_dir))
+        cursors_dir = os.path.join(self.output_dir, "cursors")
+        svg_dir = os.path.join(self.output_dir, "cursors_scalable")
+        if self.bitmap_check.get_active():
+            os.makedirs(cursors_dir, exist_ok=True)
+        if self.svg_check.get_active():
+            os.makedirs(svg_dir, exist_ok=True)
+
+        output_names = []
+        if self.bitmap_check.get_active():
+            output_names.append(_("bitmap"))
+        if self.svg_check.get_active():
+            output_names.append(_("SVG"))
+        self.log(_("\nStarting conversion ({})").format(_(" + ").join(output_names)))
         self.button_box.set_visible(False)
         self.progress_clamp.set_visible(True)
         self.progress_bar.set_fraction(0.0)
@@ -707,7 +745,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
 
         # Execute conversion in background thread to avoid blocking UI
         def run():
-            self._do_conversion_worker(cursors_dir)
+            self._do_conversion_worker(cursors_dir, svg_dir)
 
         thread = threading.Thread(target=run, daemon=True)
         thread.start()
@@ -717,7 +755,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.progress_bar.set_fraction(fraction)
         self.progress_label.set_text(text)
 
-    def _do_conversion_worker(self, cursors_dir):
+    def _do_conversion_worker(self, cursors_dir, svg_dir):
         """Actual conversion logic executed in background thread"""
         try:
             # Get user-selected target sizes
@@ -748,6 +786,8 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
             converted = 0
             add_shadow = self.shadow_switch.get_active()
             use_superres = self.superres_switch.get_active()
+            generate_bitmap = self.bitmap_check.get_active()
+            generate_svg = self.svg_check.get_active()
 
             for win_type, filename in self.inf_parser.cursor_files.items():
                 xcursor_name = WIN_TO_XCURSOR.get(win_type)
@@ -755,7 +795,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                     self.log(_("Skipping unmapped type: {}").format(win_type))
                     continue
 
-                output_file = os.path.join(cursors_dir, xcursor_name)
+                output_file = os.path.join(cursors_dir, xcursor_name) if generate_bitmap else None
 
                 # Update progress to main thread
                 frac = (converted + 1) / total
@@ -769,6 +809,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                 success = self.converter.convert_cursor(
                     cursor_file=filename,
                     output_file=output_file,
+                    svg_output_dir=svg_dir if generate_svg else None,
                     xcursor_name=xcursor_name,
                     target_sizes=target_sizes,
                     add_shadow=add_shadow,
@@ -784,13 +825,17 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
                     )
 
             # Create symbolic links
-            if self.symlink_switch.get_active():
+            if generate_bitmap and self.symlink_switch.get_active():
                 GLib.idle_add(
                     lambda c=converted, t=total:
                     self._update_ui_progress(c / t if t else 1.0, _("Creating symbolic links..."))
                 )
                 self.log(_("\nCreating symbolic links..."))
                 self.converter.create_symlinks(cursors_dir)
+
+            if generate_svg and self.symlink_switch.get_active():
+                self.log(_("\nCreating SVG symbolic links..."))
+                self.converter.create_svg_symlinks(svg_dir)
 
             # Create index.theme
             GLib.idle_add(
@@ -802,6 +847,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
             self.log(_("Theme location: {}").format(self.output_dir))
             self.log(_("\nConversion complete! Click [Install Theme] button to install to system"))
 
+            self.generated_bitmap = generate_bitmap
             GLib.idle_add(self._on_conversion_done)
 
         except Exception as e:
@@ -815,7 +861,7 @@ class Win2xcurGuiWindow(Adw.ApplicationWindow):
         self.progress_clamp.set_visible(False)
         self.button_box.set_visible(True)
         self.convert_btn.set_sensitive(True)
-        self.preview_btn.set_sensitive(True)
+        self.preview_btn.set_sensitive(self.generated_bitmap)
         self.apply_btn.set_sensitive(True)
 
     def _on_conversion_error(self):

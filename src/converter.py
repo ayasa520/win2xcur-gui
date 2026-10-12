@@ -2,6 +2,8 @@
 
 import os
 import gettext
+import base64
+import json
 import numpy as np
 from typing import Callable
 
@@ -215,12 +217,13 @@ class CursorConverter:
     def convert_cursor(
         self,
         cursor_file: str,
-        output_file: str,
+        output_file: str | None,
         xcursor_name: str,
         target_sizes: list[int],
         add_shadow: bool = False,
         use_superres: bool = False,
         inf_dir: str | None = None,
+        svg_output_dir: str | None = None,
     ) -> bool:
         """
         Convert single cursor file
@@ -232,6 +235,7 @@ class CursorConverter:
             add_shadow: whether to add shadow
             use_superres: whether to use super-resolution
             inf_dir: INF file directory (for finding cursor files)
+            svg_output_dir: optional directory for per-size SVG output
 
         Returns:
             whether conversion succeeded
@@ -586,12 +590,20 @@ class CursorConverter:
                 self.log(_("✗ Failed to generate any sizes: {}").format(cursor_file))
                 return False
 
-            # Convert to X11 format
-            x11_data = to_x11(merged_frames)
+            # Write only the formats requested by the caller. Both formats use the
+            # same merged frames so expensive scaling and super-resolution happen once.
+            if output_file:
+                x11_data = to_x11(merged_frames)
+                with open(output_file, "wb") as f:
+                    f.write(x11_data)
 
-            # Write file
-            with open(output_file, "wb") as f:
-                f.write(x11_data)
+            if svg_output_dir:
+                self._write_svg_cursors(
+                    svg_output_dir,
+                    xcursor_name,
+                    merged_frames,
+                    target_sizes,
+                )
 
             self.log(
                 _("  ✓ Generated cursor file with {} sizes ({} frames)").format(
@@ -606,6 +618,83 @@ class CursorConverter:
 
             traceback.print_exc()
             return False
+
+    def _write_svg_cursors(
+        self,
+        output_dir: str,
+        cursor_name: str,
+        frames,
+        target_sizes: list[int],
+    ) -> None:
+        """Write a GNOME scalable cursor directory for one cursor.
+
+        GNOME's scalable cursor loader does not discover arbitrary SVG files in a
+        flat directory.  It expects one directory per cursor, one SVG per frame, and
+        a metadata.json file describing nominal size, hotspot, and frame delay.  The
+        artwork remains embedded as PNG data so pixel-art cursors keep their original
+        appearance while the theme uses the native scalable-cursor animation format.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        cursor_dir = os.path.join(output_dir, cursor_name)
+        os.makedirs(cursor_dir, exist_ok=True)
+        metadata = []
+        for target_size in target_sizes:
+            frame_images = [
+                next((image for image in frame.images if image.nominal == target_size), None)
+                for frame in frames
+            ]
+            frame_images = [image for image in frame_images if image is not None]
+            if not frame_images:
+                self.log(_("  Skipping SVG {}x{}: no generated image").format(target_size, target_size))
+                continue
+
+            durations = [max(1, int(frame.delay or 100)) for frame in frames if next(
+                (image for image in frame.images if image.nominal == target_size), None
+            ) is not None]
+            for index, (image, duration) in enumerate(zip(frame_images, durations)):
+                png_data = image.image.make_blob(format="png")
+                encoded = base64.b64encode(png_data).decode("ascii")
+                filename = f"{cursor_name}-{target_size}-{index + 1}.svg"
+                svg = (
+                    '<?xml version="1.0" encoding="UTF-8"?>\n'
+                    f'<svg xmlns="http://www.w3.org/2000/svg" width="{target_size}" '
+                    f'height="{target_size}" viewBox="0 0 {target_size} {target_size}">\n'
+                    f'  <image width="{target_size}" height="{target_size}" '
+                    f'preserveAspectRatio="none" href="data:image/png;base64,{encoded}"/>\n'
+                    '</svg>\n'
+                )
+                output_path = os.path.join(cursor_dir, filename)
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write(svg)
+                hotspot_x, hotspot_y = image.hotspot
+                metadata.append({
+                    "filename": filename,
+                    "delay": duration,
+                    "hotspot_x": int(hotspot_x),
+                    "hotspot_y": int(hotspot_y),
+                    "nominal_size": target_size,
+                })
+        metadata_path = os.path.join(cursor_dir, "metadata.json")
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        self.log(_("  ✓ Generated SVG files for {}").format(cursor_name))
+
+    def create_svg_symlinks(self, scalable_dir: str) -> int:
+        """Create the same cursor-name aliases inside a scalable theme tree."""
+        created = 0
+        for source, links in SYMLINK_MAP.items():
+            for link_name in links:
+                link_path = os.path.join(scalable_dir, link_name)
+                try:
+                    if os.path.lexists(link_path):
+                        os.remove(link_path)
+                    os.symlink(source, link_path)
+                    created += 1
+                except OSError:
+                    pass
+        self.log(_("✓ Created {} SVG symbolic links").format(created))
+        return created
 
     def create_symlinks(self, cursors_dir: str) -> int:
         """
