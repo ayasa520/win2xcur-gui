@@ -37,7 +37,7 @@
             "sources": [
                 {
                     "type": "archive",
-                    "url": "https://imagemagick.org/archive/releases/ImageMagick-7.1.2-13.tar.xz",
+                    "url": "https://download.imagemagick.org/archive/releases/ImageMagick-7.1.2-13.tar.xz",
                     "sha256": "968e022c8c7ee620680bac658628ef0f582be7b8aa71b386a9a9d068ec17dbd2"
                 }
             ]
@@ -252,7 +252,7 @@
                 {
                     "type": "git",
                     "url": "https://github.com/ayasa520/win2xcur-gui.git",
-                    "tag": "v0.1.6"
+                    "tag": "v0.1.7"
                 }
             ]
         }
